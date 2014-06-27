@@ -29,3 +29,8 @@ endif
 ifeq ($(CONFIG_SYSFS),y)
 obj-$(CONFIG_DEBUG_INFO_BTF) += sysfs_btf.o
 endif
+
+# various version of gcc have a LTO bug where the &&labels used in the
+# BPF interpreter can cause linker errors when spread incorrectly over
+# partitions. Disable LTO for BPF for now
+CFLAGS_core.o = $(DISABLE_LTO)
