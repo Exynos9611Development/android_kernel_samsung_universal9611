@@ -516,7 +516,7 @@ static int suspend_enter(suspend_state_t state, bool *wakeup)
  Enable_cpus:
 	enable_nonboot_cpus();
 #ifdef CONFIG_SEC_PERF_BIG_AFFINITY_RESUME
-	cpumask_copy(&backup_cpu_mask, &current->cpus_allowed);
+	cpumask_copy(&backup_cpu_mask, current->cpus_ptr);
 	set_cpus_allowed_ptr(current, &fast_cpu_mask);
 #endif
 
@@ -586,7 +586,7 @@ int suspend_devices_and_enter(suspend_state_t state)
 	pm_suspend_target_state = PM_SUSPEND_ON;
 #ifdef CONFIG_SEC_PERF_BIG_AFFINITY_RESUME
 	if (!cpumask_empty(&backup_cpu_mask)) {
-		cpumask_copy(&current->cpus_allowed, &backup_cpu_mask);
+		cpumask_copy(&current->cpus_mask, &backup_cpu_mask);
 		cpumask_clear(&backup_cpu_mask);
 	}
 #endif
