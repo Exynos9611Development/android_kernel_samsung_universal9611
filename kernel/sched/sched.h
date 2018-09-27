@@ -2450,6 +2450,7 @@ unsigned long uclamp_rq_util_with(struct rq *rq, unsigned long util,
 }
 #endif /* CONFIG_UCLAMP_TASK */
 
+
 #ifdef CONFIG_SCHED_WALT
 
 static inline bool
@@ -2460,6 +2461,10 @@ walt_task_in_cum_window_demand(struct rq *rq, struct task_struct *p)
 }
 
 #endif /* CONFIG_SCHED_WALT */
+unsigned long task_util_est(struct task_struct *p);
+unsigned int uclamp_task(struct task_struct *p);
+bool uclamp_latency_sensitive(struct task_struct *p);
+bool uclamp_boosted(struct task_struct *p);
 
 #ifdef arch_scale_freq_capacity
 #ifndef arch_scale_freq_invariant
