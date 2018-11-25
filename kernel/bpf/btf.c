@@ -1834,7 +1834,7 @@ static s32 btf_struct_check_meta(struct btf_verifier_env *env,
 
 		if (BITS_ROUNDUP_BYTES(offset) > struct_size) {
 			btf_verifier_log_member(env, t, member,
-						"Memmber bits_offset exceeds its struct size");
+						"Member bits_offset exceeds its struct size");
 			return -EINVAL;
 		}
 
