@@ -52,6 +52,7 @@ static ssize_t show_total_trans(struct cpufreq_policy *policy, char *buf)
 {
 	return sprintf(buf, "%d\n", policy->stats->total_trans);
 }
+cpufreq_freq_attr_ro(total_trans);
 
 static ssize_t show_time_in_state(struct cpufreq_policy *policy, char *buf)
 {
@@ -70,6 +71,7 @@ static ssize_t show_time_in_state(struct cpufreq_policy *policy, char *buf)
 	}
 	return len;
 }
+cpufreq_freq_attr_ro(time_in_state);
 
 static ssize_t store_reset(struct cpufreq_policy *policy, const char *buf,
 			   size_t count)
@@ -78,6 +80,7 @@ static ssize_t store_reset(struct cpufreq_policy *policy, const char *buf,
 	cpufreq_stats_clear_table(policy->stats);
 	return count;
 }
+cpufreq_freq_attr_wo(reset);
 
 static ssize_t show_trans_table(struct cpufreq_policy *policy, char *buf)
 {
@@ -123,10 +126,6 @@ static ssize_t show_trans_table(struct cpufreq_policy *policy, char *buf)
 	return len;
 }
 cpufreq_freq_attr_ro(trans_table);
-
-cpufreq_freq_attr_ro(total_trans);
-cpufreq_freq_attr_ro(time_in_state);
-cpufreq_freq_attr_wo(reset);
 
 static struct attribute *default_attrs[] = {
 	&total_trans.attr,
