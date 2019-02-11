@@ -821,6 +821,10 @@ ifeq ($(ld-name),lld)
 LDFLAGS += -O2
 endif
 
+ifeq ($(ld-name),lld)
+LDFLAGS += -O2
+endif
+
 KBUILD_CFLAGS += $(call cc-disable-warning, unused-const-variable)
 
 # These result in bogus false positives
