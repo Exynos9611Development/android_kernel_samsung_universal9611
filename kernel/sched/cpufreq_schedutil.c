@@ -278,7 +278,7 @@ static void sugov_update_commit(struct sugov_policy *sg_policy, u64 time,
 
 		policy->cur = next_freq;
 		trace_cpu_frequency(next_freq, smp_processor_id());
-	} else {
+	} else if (!sg_policy->work_in_progress) {
 		cpu = sugov_select_scaling_cpu();
 		if (cpu < 0)
 			return;
@@ -501,8 +501,6 @@ static void sugov_work(struct kthread_work *work)
 	__cpufreq_driver_target(sg_policy->policy, freq, CPUFREQ_RELATION_L);
 	mutex_unlock(&sg_policy->work_lock);
 	up_write(&sg_policy->policy->rwsem);
-
-	sg_policy->work_in_progress = false;
 }
 
 static void sugov_irq_work(struct irq_work *irq_work)
