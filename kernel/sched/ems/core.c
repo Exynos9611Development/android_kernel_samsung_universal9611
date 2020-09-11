@@ -903,6 +903,8 @@ static int __init init_sysfs(void)
 {
 	cpumask_speed_init();
 	ems_kobj = kobject_create_and_add("ems", kernel_kobj);
+	if (!ems_kobj)
+		return -ENOMEM;
 
 	lb_env = alloc_percpu(struct lb_env);
 	lb_work = alloc_percpu(struct cpu_stop_work);
