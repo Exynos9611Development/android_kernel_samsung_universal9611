@@ -97,7 +97,7 @@ int vm_highmem_is_dirtyable;
  * The generator of dirty data starts writeback at this percentage
  */
 #ifdef CONFIG_LARGE_DIRTY_BUFFER
-int vm_dirty_ratio = 20;
+int vm_dirty_ratio = 40;
 #else
 int vm_dirty_ratio;
 #endif
