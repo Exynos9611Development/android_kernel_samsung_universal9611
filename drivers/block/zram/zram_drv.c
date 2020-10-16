@@ -2548,7 +2548,7 @@ static int __zram_bvec_read(struct zram *zram, struct page *page, u32 index,
 		ret = zcomp_decompress(zstrm, src, size, dst);
 
 		/* Should NEVER happen. BUG() if it does. */
-		if (unlikely(ret)) {
+		if (WARN_ON(ret)) {
 #ifdef CONFIG_PGTABLE_MAPPING
 			unsigned long pa_start = 0, pa_end = 0;
 
