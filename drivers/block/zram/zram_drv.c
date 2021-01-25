@@ -701,8 +701,7 @@ init_lru_writeback_fail:
 	zram->nr_pages = 0;
 #endif
 out:
-	if (bitmap)
-		kvfree(bitmap);
+	kvfree(bitmap);
 
 	if (bdev)
 		blkdev_put(bdev, FMODE_READ | FMODE_WRITE | FMODE_EXCL);
