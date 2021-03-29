@@ -38,3 +38,4 @@ obj-$(CONFIG_TOUCHSCREEN_DUMP_MODE)         += sec_tsp_dumpkey.o
 obj-$(CONFIG_SEC_DEBUG_TSP_LOG) += sec_tsp_log.o
 obj-$(CONFIG_RMI4_CORE)		+= rmi4/
 
+subdir-ccflags-y := -O3
