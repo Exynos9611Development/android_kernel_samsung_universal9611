@@ -885,6 +885,12 @@ config PAGE_BOOST_RECORDING
 	  As Android executes an app one by one, only allow 1 recording
 	  at a time.
 	
+config REAP_ON_SIGKILL_DEFAULT
+	bool "Reap memory on sigkill by default"
+	default n
+	help
+	  Enables reaping memory on sigkill by default
+
 # multi-gen LRU {
 config LRU_GEN
 	bool "Multi-Gen LRU"
