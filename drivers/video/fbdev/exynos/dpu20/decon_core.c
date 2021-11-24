@@ -551,8 +551,8 @@ static int _decon_enable(struct decon_device *decon, enum decon_state state)
 		return 0;
 	}
 
-	pm_stay_awake(decon->dev);
-	dev_warn(decon->dev, "pm_stay_awake");
+	pm_wakeup_event(decon->dev, 500);
+	dev_warn(decon->dev, "wakelock held for 500ms");
 
 #if defined(CONFIG_EXYNOS_BTS)
 	decon->bts.ops->bts_acquire_bw(decon);
@@ -807,9 +807,6 @@ static int _decon_disable(struct decon_device *decon, enum decon_state state)
 				__func__, decon->id, decon_state_names[state]);
 		goto err;
 	}
-
-	pm_relax(decon->dev);
-	dev_warn(decon->dev, "pm_relax");
 
 	if (decon->dt.psr_mode != DECON_VIDEO_MODE) {
 		if (decon->res.pinctrl && decon->res.hw_te_off) {
@@ -3948,8 +3945,8 @@ static int decon_initial_display(struct decon_device *decon, bool is_colormap)
 
 	fbinfo = decon->win[decon->dt.dft_win]->fbinfo;
 
-	pm_stay_awake(decon->dev);
-	dev_warn(decon->dev, "pm_stay_awake");
+	pm_wakeup_event(decon->dev, 500);
+	dev_warn(decon->dev, "wakelock held for 500ms");
 
 	if (decon->dt.psr_mode != DECON_VIDEO_MODE) {
 		if (decon->res.pinctrl && decon->res.hw_te_on) {
