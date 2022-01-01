@@ -302,6 +302,42 @@ config ARM_EXYNOS_ACME
 
 	  If in doubt, say N.
 
+config ARM_EXYNOS_ACME_MODCLOCK
+	bool "Override default CPU frequency limits"
+	depends on ARM_EXYNOS_ACME
+	default n
+	help
+	  This config enables modification for set user clocks.
+
+	  If in doubt, say N.
+
+if ARM_EXYNOS_ACME_MODCLOCK
+
+config MAX_FREQ_BIG
+	int "Sets maximum frequency of the big core"
+	default 2314000
+	help
+	  Set maximum possible clock on the big core, in kHz.
+
+config MIN_FREQ_BIG
+	int "Sets minimum frequency of the big core"
+	default 936000
+	help
+	  Set minimum possible clock on the big core, in kHz.
+
+config MAX_FREQ_LITTLE
+	int "Sets maximum frequency of the little core"
+	default 1742000
+	help
+	  Set maximum possible clock on the little core, in kHz.
+
+config MIN_FREQ_LITTLE
+	int "Sets minimum of the little core"
+	default 403000
+	help
+      Set minimum possible clock on the little core, in kHz.
+endif
+
 config ARM_EXYNOS_UFC
 	bool "SAMSUNG EXYNOS UFC(User Frequency Control) driver"
 	depends on ARM_EXYNOS_ACME

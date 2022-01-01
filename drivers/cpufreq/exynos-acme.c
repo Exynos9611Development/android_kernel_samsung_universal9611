@@ -1153,6 +1153,65 @@ static int register_dm_callback(struct exynos_cpufreq_domain *domain)
 	return register_exynos_dm_freq_scaler(domain->dm_type, dm_scaler);
 }
 
+#ifdef CONFIG_ARM_EXYNOS_ACME_MODCLOCK
+/* Set frequency values */
+static unsigned long arg_cpu_max_c1 = CONFIG_MAX_FREQ_LITTLE;
+static unsigned long arg_cpu_max_c2 = CONFIG_MAX_FREQ_BIG;
+static unsigned long arg_cpu_min_c1 = CONFIG_MIN_FREQ_LITTLE;
+static unsigned long arg_cpu_min_c2 = CONFIG_MIN_FREQ_BIG;
+
+/*
+ * Parses CPU freq from arguments
+ *
+ * return 0 on successful, negative error code on failure
+*/
+static int __init cpufreq_parse_freq(char *param, unsigned long *new,
+                                         const char *param_name)
+{
+    unsigned long freq_khz;
+    int ret;
+
+    if (!param || !new || !param_name)
+        return -EINVAL;
+
+    ret = kstrtoul(param, 0, &freq_khz);
+    if (ret) {
+        pr_err("Invalid %s value: %s\n", param_name, param);
+        return ret;
+    }
+
+    *new = freq_khz;
+    pr_info("%s=%lu kHz\n", param_name, freq_khz);
+    return 0;
+}
+
+/* Little cluster parameter handlers */
+static int __init cpufreq_read_cpu_max_c1(char *param)
+{
+    return cpufreq_parse_freq(param, &arg_cpu_max_c1, "cpu_max_c1");
+}
+__setup("cpu_max_c1=", cpufreq_read_cpu_max_c1);
+
+static int __init cpufreq_read_cpu_min_c1(char *param)
+{
+    return cpufreq_parse_freq(param, &arg_cpu_min_c1, "cpu_min_c1");
+}
+__setup("cpu_min_c1=", cpufreq_read_cpu_min_c1);
+
+/* Big cluster parameter handlers */
+static int __init cpufreq_read_cpu_min_c2(char *param)
+{
+    return cpufreq_parse_freq(param, &arg_cpu_min_c2, "cpu_min_c2");
+}
+__setup("cpu_min_c2=", cpufreq_read_cpu_min_c2);
+
+static int __init cpufreq_read_cpu_max_c2(char *param)
+{
+    return cpufreq_parse_freq(param, &arg_cpu_max_c2, "cpu_max_c2");
+}
+__setup("cpu_max_c2=", cpufreq_read_cpu_max_c2);
+#endif
+
 static __init int init_domain(struct exynos_cpufreq_domain *domain,
 					struct device_node *dn)
 {
@@ -1183,6 +1242,20 @@ static __init int init_domain(struct exynos_cpufreq_domain *domain,
 
 	if (of_property_read_bool(dn, "need-awake"))
 		domain->need_awake = true;
+
+#ifdef CONFIG_ARM_EXYNOS_ACME_MODCLOCK
+	/* HACK: Set modified frequencies for little cluster */
+	if (domain->id == 0) {
+		domain->max_freq = arg_cpu_max_c1;
+		domain->min_freq = arg_cpu_min_c1;
+	}
+
+	/* HACK: Set modified frequencies for big cluster */
+	if (domain->id == 1) {
+		domain->max_freq = arg_cpu_max_c2;
+		domain->min_freq = arg_cpu_min_c2;
+	}
+#endif
 
 	domain->boot_freq = cal_dfs_get_boot_freq(domain->cal_id);
 	domain->resume_freq = cal_dfs_get_resume_freq(domain->cal_id);
