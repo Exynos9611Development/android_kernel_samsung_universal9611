@@ -27,6 +27,7 @@
 #include <linux/nmi.h>
 #include <linux/console.h>
 #include <linux/bug.h>
+#include <linux/syscalls.h>
 #include <linux/ratelimit.h>
 #include <linux/sysfs.h>
 #include <trace/events/error_report.h>
@@ -169,6 +170,25 @@ void nmi_panic(struct pt_regs *regs, const char *msg)
 }
 EXPORT_SYMBOL(nmi_panic);
 
+#define FS_SYNC_TIMEOUT_MS 2000
+
+static struct work_struct fs_sync_work;
+static DECLARE_COMPLETION(sync_compl);
+static void fs_sync_work_func(struct work_struct *work)
+{
+	pr_emerg("sys_sync:syncing fs\n");
+	sys_sync();
+	complete(&sync_compl);
+}
+void exec_fs_sync_work(void)
+{
+	INIT_WORK(&fs_sync_work, fs_sync_work_func);
+	reinit_completion(&sync_compl);
+	schedule_work(&fs_sync_work);
+	if (wait_for_completion_timeout(&sync_compl, msecs_to_jiffies(FS_SYNC_TIMEOUT_MS)) == 0)
+		pr_emerg("sys_sync:wait complete timeout\n");
+}
+
 void check_panic_on_warn(const char *origin)
 {
 	unsigned int limit;
@@ -200,7 +220,11 @@ void panic(const char *fmt, ...)
 	bool _crash_kexec_post_notifiers = crash_kexec_post_notifiers;
 #ifdef CONFIG_SEC_DEBUG_EXTRA_INFO
 	struct pt_regs regs;
+#endif
 
+	exec_fs_sync_work();
+
+#ifdef CONFIG_SEC_DEBUG_EXTRA_INFO
 	regs.regs[30] = _RET_IP_;
 	regs.pc = regs.regs[30] - sizeof(unsigned int);
 #endif
