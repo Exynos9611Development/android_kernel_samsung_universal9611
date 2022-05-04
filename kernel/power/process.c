@@ -83,13 +83,13 @@ static int try_to_freeze_tasks(bool user_only)
 			todo += wq_busy;
 		}
 
-		if (!todo || time_after(jiffies, end_time))
-			break;
-
 		if (pm_wakeup_pending()) {
 			wakeup = true;
 			break;
 		}
+
+		if (!todo || time_after(jiffies, end_time))
+			break;
 
 		/*
 		 * We need to retry, but first give the freezing tasks some
@@ -144,7 +144,7 @@ static int try_to_freeze_tasks(bool user_only)
 	sec_debug_set_unfrozen_task((uint64_t)NULL);
 	sec_debug_set_unfrozen_task_count((uint64_t)0);
 
-	return todo ? -EBUSY : 0;
+	return todo || wakeup ? -EBUSY : 0;
 }
 
 /**
