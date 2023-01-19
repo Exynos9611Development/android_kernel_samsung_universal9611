@@ -46,7 +46,7 @@
 		/* MIF / INT / CL0 / CL1 */
 		/* this qos_table should be per-platform. Leave it here until we have multiple platfrom support */
 		qos_table = <
-			 419000 100000 403000  936000  /* SCSC_QOS_MIN */
+			 419000 100000 702000  1040000  /* SCSC_QOS_MIN */
 			1014000 533000 910000  1664000 /* SCSC_QOS_MED */
 			2093000 667000 1742000 2314000 /* SCSC_QOS_MAX */
 			    >;
