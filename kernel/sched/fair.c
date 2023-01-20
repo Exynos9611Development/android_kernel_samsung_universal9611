@@ -820,10 +820,6 @@ void init_entity_runnable_average(struct sched_entity *se)
 		sa->load_avg = scale_load_down(se->load.weight);
 	sa->load_sum = sa->load_avg * LOAD_AVG_MAX;
 	/* when this task enqueue'ed, it will contribute to its cfs_rq's load_avg */
-
-#ifdef CONFIG_SCHED_EMS
-	ems_new_entity_load(current, se);
-#endif
 }
 
 static inline u64 cfs_rq_clock_task(struct cfs_rq *cfs_rq);
@@ -3140,11 +3136,6 @@ ___update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 	if (!weight)
 		running = 0;
 
-#ifdef CONFIG_SCHED_EMS
-	if (!cfs_rq && !rt_rq)
-		ems_update_load_avg(delta, cpu, weight, sa);
-#endif
-
 	/*
 	 * Now we know we crossed measurement unit boundaries. The *_avg
 	 * accrues by two steps:
@@ -3631,9 +3622,6 @@ static inline void update_load_avg(struct sched_entity *se, int flags)
 
 	if (decayed && (flags & UPDATE_TG))
 		update_tg_load_avg(cfs_rq, 0);
-
-	if (entity_is_task(se))
-		ontime_trace_task_info(task_of(se));
 }
 
 /**
