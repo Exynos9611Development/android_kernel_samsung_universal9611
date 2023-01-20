@@ -8068,11 +8068,11 @@ select_task_rq_fair(struct task_struct *p, int prev_cpu, int sd_flag, int wake_f
 	int sync = (wake_flags & WF_SYNC) && !(current->flags & PF_EXITING);
 	int target_cpu;
 
-	if (sched_feat(EXYNOS_MS)) {
-		target_cpu = ems_select_task_rq_fair(p, prev_cpu, sd_flag, sync, 1);
-		if (target_cpu >= 0)
-			return target_cpu;
-	}
+#ifdef CONFIG_SCHED_EMS
+	target_cpu = ems_select_task_rq_fair(p, prev_cpu, sd_flag, sync, 1);
+	if (likely(target_cpu >= 0))
+		return target_cpu;
+#endif
 
 	rcu_read_lock();
 
