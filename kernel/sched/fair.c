@@ -8057,7 +8057,14 @@ select_task_rq_fair(struct task_struct *p, int prev_cpu, int sd_flag, int wake_f
 	int target_cpu;
 
 #ifdef CONFIG_SCHED_EMS
-	target_cpu = ems_select_task_rq_fair(p, prev_cpu, sd_flag, sync, 1);
+	/*
+	 * Update utilization of waking task to apply "sleep" period
+	 * before selecting cpu.
+	 */
+	if (!(sd_flag & SD_BALANCE_FORK))
+		sync_entity_load_avg(&p->se);
+
+	target_cpu = ems_select_task_rq_fair(p, prev_cpu, sync, 1);
 	if (likely(target_cpu >= 0))
 		return target_cpu;
 #endif
