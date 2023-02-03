@@ -111,3 +111,18 @@ config SECURITY_SELINUX_SIDTAB_HASH_BITS
 	  collisions may be viewed at /sys/fs/selinux/ss/sidtab_hash_stats. If
 	  chain lengths are high (e.g. > 20) then selecting a higher value here
 	  will ensure that lookups times are short and stable.
+
+config SECURITY_SELINUX_SETENFORCE_OVERRIDE
+	bool "NSA SELinux override setenforce"
+	depends on SECURITY_SELINUX
+	default n
+	help
+	  Disable all setenforce calls - /selinux/enforce and override the value to SECURITY_SELINUX_SETENFORCE_OVERRIDE_VALUE
+
+config SECURITY_SELINUX_SETENFORCE_OVERRIDE_VALUE
+	int "NSA SELinux override setenforce value"
+	depends on SECURITY_SELINUX_SETENFORCE_OVERRIDE
+	range 0 1
+	default 0
+	help
+	  Select the setenforce override value. 0 = permissive 1 = enforcing

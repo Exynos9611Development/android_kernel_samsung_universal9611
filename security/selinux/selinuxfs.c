@@ -157,7 +157,11 @@ static ssize_t sel_write_enforce(struct file *file, const char __user *buf,
 	if (sscanf(page, "%d", &new_value) != 1)
 		goto out;
 
+#ifdef CONFIG_SECURITY_SELINUX_SETENFORCE_OVERRIDE_VALUE
+	new_value = CONFIG_SECURITY_SELINUX_SETENFORCE_OVERRIDE_VALUE;
+#else
 	new_value = !!new_value;
+#endif
 
 	old_value = enforcing_enabled(state);
 	if (new_value != old_value) {
