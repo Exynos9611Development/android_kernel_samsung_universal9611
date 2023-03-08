@@ -425,22 +425,23 @@ int scsc_printk_bin(int force, int tag, int dlev, const void *start, size_t len)
 		if ((lvl) < 7)\
 			printk_emit((lvl), (dev), fmt, ## args);\
 	} while (0)
+#define SCSC_TAG_LVL(tag, lvl, fmt, ...)
 #endif
-#define SCSC_PRINTK(fmt, args ...)               printk(SCSC_PREFIX fmt, ## args)
-#define SCSC_PRINTK_TAG(tag, fmt, args ...)      printk(SCSC_PREFIX "[" # tag "] "fmt, ## args)
-#define SCSC_PRINTK_BIN(start, len)              print_hex_dump(KERN_INFO, \
+#define SCSC_PRINTK(fmt, args ...)             //  printk(SCSC_PREFIX fmt, ## args)
+#define SCSC_PRINTK_TAG(tag, fmt, args ...)    //  printk(SCSC_PREFIX "[" # tag "] "fmt, ## args)
+#define SCSC_PRINTK_BIN(start, len)            /*  print_hex_dump(KERN_INFO, \
 							       SCSC_PREFIX"[BINARY]->|", \
 							       DUMP_PREFIX_ADDRESS, \
 							       16, 4, start, \
-							       len, true)
+							       len, true) */
 
-#define SCSC_PRINTK_FF(fmt, args ...)            printk(SCSC_PREFIX fmt, ## args)
-#define SCSC_PRINTK_TAG_FF(tag, fmt, args ...)   printk(SCSC_PREFIX"[" # tag "] "fmt, ## args)
-#define SCSC_PRINTK_BIN_FF(start, len)           print_hex_dump(KERN_INFO, \
+#define SCSC_PRINTK_FF(fmt, args ...)           //  printk(SCSC_PREFIX fmt, ## args)
+#define SCSC_PRINTK_TAG_FF(tag, fmt, args ...)  //  printk(SCSC_PREFIX"[" # tag "] "fmt, ## args)
+#define SCSC_PRINTK_BIN_FF(start, len)          /*  print_hex_dump(KERN_INFO, \
 							       SCSC_PREFIX"[BINARY]->|", \
 							       DUMP_PREFIX_ADDRESS, \
 							       16, 4, start, \
-							       len, true)
+							       len, true)*/
 
 #define SCSC_EMERG(fmt, args...)        pr_emerg(SCSC_DBG_FMT(fmt), __func__, ## args)
 #define SCSC_ALERT(fmt, args...)        pr_alert(SCSC_DBG_FMT(fmt), __func__, ## args)
