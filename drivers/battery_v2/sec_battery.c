@@ -4675,10 +4675,7 @@ skip_current_monitor:
 	pr_debug("%s: Status(%s), mode(%s), Health(%s), Cable(%s, %s, %d, %d), rp(%d), level(%d%%), lcd(%d), slate_mode(%d), store_mode(%d), charging_enabled(%d)"
 		", HV(%s, %d), sleep_mode(%d)"
 		", Cycle(%dw)"
-#else
 		", Cycle(%d)"
-#endif
-#endif
 		 "\n", __func__,
 		 sec_bat_status_str[battery->status],
 		 sec_bat_charging_mode_str[battery->charging_mode],
