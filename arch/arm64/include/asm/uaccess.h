@@ -266,7 +266,7 @@ static inline void __user *__uaccess_mask_ptr(const void __user *ptr)
 	"	b	2b\n"						\
 	"	.previous\n"						\
 	_ASM_EXTABLE(1b, 3b)						\
-	: "+r" (err), "=&r" (x)						\
+	: "+r" (err), "=r" (x)						\
 	: "r" (addr), "i" (-EFAULT))
 
 #define __get_user_err(x, ptr, err)					\
