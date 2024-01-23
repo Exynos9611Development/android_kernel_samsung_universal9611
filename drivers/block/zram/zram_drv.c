@@ -3154,7 +3154,7 @@ static ssize_t reset_store(struct device *dev,
 	stop_lru_writeback(zram);
 #endif
 	/* Make sure all the pending I/O are finished */
-	fsync_bdev(bdev);
+	sync_blockdev(bdev);
 	zram_reset_device(zram);
 	revalidate_disk(zram->disk);
 	bdput(bdev);
@@ -3369,7 +3369,7 @@ static int zram_remove(struct zram *zram)
 #endif
 	zram_debugfs_unregister(zram);
 	/* Make sure all the pending I/O are finished */
-	fsync_bdev(bdev);
+	sync_blockdev(bdev);
 	zram_reset_device(zram);
 	bdput(bdev);
 
