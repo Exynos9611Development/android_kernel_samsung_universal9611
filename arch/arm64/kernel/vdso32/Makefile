@@ -5,8 +5,14 @@
 # A mix between the arm64 and arm vDSO Makefiles.
 
 ifeq ($(LLVM),1)
+ifeq ($(LLVM_IAS),1)
+  CC_ARM32 ?= $(CC)
+  CC_ARM32 += --target=arm-linux-gnueabi
+  LD_ARM32 ?= $(LD)
+else
   CC_ARM32 := $(CC) $(CLANG_TARGET_ARM32) $(CLANG_GCC32_TC) $(CLANG_PREFIX32)
   LD_ARM32 := $(LD)
+endif
 else
   CC_ARM32 := $(CROSS_COMPILE_ARM32)$(cc-name)
   LD_ARM32 := $(CROSS_COMPILE_ARM32)ld
