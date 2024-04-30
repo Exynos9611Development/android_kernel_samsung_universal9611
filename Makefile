@@ -781,7 +781,7 @@ endif
 
 ifdef CONFIG_INLINE_OPTIMIZATION
 ifeq ($(cc-name),clang)
-KBUILD_CFLAGS	+= -mllvm -inline-threshold=600
+KBUILD_CFLAGS	+= -mllvm -inline-threshold=1000
 KBUILD_CFLAGS	+= -mllvm -inlinehint-threshold=750
 else ifeq ($(cc-name),gcc)
 KBUILD_CFLAGS	+= --param max-inline-insns-single=600
