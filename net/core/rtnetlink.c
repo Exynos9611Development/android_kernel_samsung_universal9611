@@ -59,6 +59,8 @@
 #include <net/rtnetlink.h>
 #include <net/net_namespace.h>
 
+#define CONFIG_DEBUG_RTNL_LATENCY
+
 struct rtnl_link {
 	rtnl_doit_func		doit;
 	rtnl_dumpit_func	dumpit;
@@ -67,9 +69,29 @@ struct rtnl_link {
 
 static DEFINE_MUTEX(rtnl_mutex);
 
+#ifdef CONFIG_DEBUG_RTNL_LATENCY
+static unsigned long time_latency;
+static char owner_comm[32];
+#endif
+
 void rtnl_lock(void)
 {
+#ifdef CONFIG_DEBUG_RTNL_LATENCY
+	unsigned long local_time_latency = jiffies;
+
 	mutex_lock(&rtnl_mutex);
+
+	if (time_after(jiffies, local_time_latency + 1 * HZ / 2)) {
+		pr_err("rtnl_lock: %s: %s took over 500 msec to grab local rtnl_lock!\n",
+			__func__, current->comm);
+		dump_stack();
+	}
+
+	strncpy(owner_comm, current->comm, 31);
+	time_latency = jiffies;
+#else
+	mutex_lock(&rtnl_mutex);
+#endif
 }
 EXPORT_SYMBOL(rtnl_lock);
 
@@ -88,6 +110,15 @@ void __rtnl_unlock(void)
 	struct sk_buff *head = defer_kfree_skb_list;
 
 	defer_kfree_skb_list = NULL;
+
+#ifdef CONFIG_DEBUG_RTNL_LATENCY
+	if (time_after(jiffies, time_latency + 1 * HZ / 2)) {
+		pr_err("rtnl_lock: %s: %s(%s) took over 500 msec to unlock\n", __func__,
+			owner_comm, current->comm);
+		dump_stack();
+	}
+	time_latency = jiffies;
+#endif
 
 	mutex_unlock(&rtnl_mutex);
 
@@ -109,7 +140,28 @@ EXPORT_SYMBOL(rtnl_unlock);
 
 int rtnl_trylock(void)
 {
+#ifdef CONFIG_DEBUG_RTNL_LATENCY
+	int ret;
+	unsigned long local_time_latency = jiffies;
+
+	ret = mutex_trylock(&rtnl_mutex);
+
+	if (time_after(jiffies, local_time_latency + 1 * HZ / 2)) {
+		pr_err("rtnl_lock: %s: %s took over 500 msec to grab local rtnl_lock!\n",
+			__func__, current->comm);
+		dump_stack();
+	}
+
+	if (ret) {
+		/* successed to grab lock */
+		strncpy(owner_comm, current->comm, 31);
+		time_latency = jiffies;
+	}
+
+	return ret;
+#else
 	return mutex_trylock(&rtnl_mutex);
+#endif
 }
 EXPORT_SYMBOL(rtnl_trylock);
 
