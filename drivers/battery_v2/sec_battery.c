@@ -512,6 +512,8 @@ static void sec_bat_change_pdo(struct sec_battery_info *battery, int vol)
 					POWER_SUPPLY_PROP_CURRENT_MAX, value);
 			}
 			battery->pdic_ps_rdy = false;
+			battery->pdic_info.sink_status.selected_pdo_num =
+				battery->pd_list.pd_info[target_pd_index].pdo_index;
 			select_pdo(battery->pd_list.pd_info[target_pd_index].pdo_index);
 		}
 	}
@@ -951,6 +953,8 @@ static bool sec_bat_change_vbus_pd(struct sec_battery_info *battery, int *input_
 			battery->pdic_ps_rdy = false;
 			sec_bat_set_current_event(battery, SEC_BAT_CURRENT_EVENT_SELECT_PDO,
 				SEC_BAT_CURRENT_EVENT_SELECT_PDO);
+			battery->pdic_info.sink_status.selected_pdo_num =
+				battery->pd_list.pd_info[target_pd_index].pdo_index;
 			select_pdo(battery->pd_list.pd_info[target_pd_index].pdo_index);
 			return true;
 		}
@@ -984,7 +988,7 @@ static void sec_bat_check_pdic_temp(struct sec_battery_info *battery, int *input
 static int sec_bat_check_pd_input_current(struct sec_battery_info *battery, int input_current)
 {
 	if (battery->current_event & SEC_BAT_CURRENT_EVENT_SELECT_PDO) {
-		input_current = battery->input_current;
+		input_current = SELECT_PDO_INPUT_CURRENT;
 		pr_debug("%s: change input_current(%d), cable_type(%d)\n", __func__, input_current, battery->cable_type);
 	}
 
@@ -1076,10 +1080,8 @@ int sec_bat_set_charging_current(struct sec_battery_info *battery)
 				sec_bat_check_wpc_temp(battery, &input_current, &charging_current);
 #if defined(CONFIG_CCIC_NOTIFIER)
 			else if (battery->cable_type == SEC_BATTERY_CABLE_PDIC) {
-				if (!sec_bat_change_vbus_pd(battery, &input_current)) {
+				if (!sec_bat_change_vbus_pd(battery, &input_current))
 					sec_bat_check_pdic_temp(battery, &input_current, &charging_current);
-					input_current = sec_bat_check_pd_input_current(battery, input_current);
-				}
 			}
 #endif
 			else if (battery->pdata->chg_temp_check_type) {
@@ -1096,7 +1098,11 @@ int sec_bat_set_charging_current(struct sec_battery_info *battery)
 			}
 		}
 #endif
-
+#if defined(CONFIG_CCIC_NOTIFIER)
+		/* check select pdo current */
+		if (battery->cable_type == SEC_BATTERY_CABLE_PDIC)
+			input_current = sec_bat_check_pd_input_current(battery, input_current);
+#endif
 		/* set limited charging current during wireless power sharing with cable charging */
 		if (battery->pdata->charging_limit_by_tx_check &&
 			battery->wc_tx_enable &&
@@ -2506,6 +2512,7 @@ static bool sec_bat_temperature_check(
 					battery->vbus_limit = true;
 					pr_debug("%s: Set AFC TA to 0V\n", __func__);
 				} else if (is_pd_wire_type(battery->cable_type)) {
+					battery->pdic_info.sink_status.selected_pdo_num = 1;
 					select_pdo(1);
 					pr_debug("%s: Set PD TA to PDO 0\n", __func__);
 				}
@@ -5565,6 +5572,7 @@ static void sec_bat_hv_disable_work(struct work_struct *work)
 			psy_do_property(battery->pdata->charger_name, set,
 					POWER_SUPPLY_PROP_CURRENT_MAX, value);
 
+			battery->pdic_info.sink_status.selected_pdo_num = 1;
 			select_pdo(1);
 		} else if (battery->current_event & SEC_BAT_CURRENT_EVENT_HV_DISABLE) {
 			int target_pd_index = battery->pd_list.max_pd_count - 1;
@@ -5589,8 +5597,11 @@ static void sec_bat_hv_disable_work(struct work_struct *work)
 			psy_do_property(battery->pdata->charger_name, set,
 					POWER_SUPPLY_PROP_CURRENT_MAX, value);
 
-			if (target_pd_index >= 0 && target_pd_index < MAX_PDO_NUM)
+			if (target_pd_index >= 0 && target_pd_index < MAX_PDO_NUM) {
+				battery->pdic_info.sink_status.selected_pdo_num =
+					battery->pd_list.pd_info[target_pd_index].pdo_index;
 				select_pdo(battery->pd_list.pd_info[target_pd_index].pdo_index);
+			}
 		}
 	}
 	wake_unlock(&battery->hv_disable_wake_lock);
@@ -7051,6 +7062,8 @@ static int make_pd_list(struct sec_battery_info *battery)
 		battery->pdic_ps_rdy = false;
 		sec_bat_set_current_event(battery, SEC_BAT_CURRENT_EVENT_SELECT_PDO,
 			SEC_BAT_CURRENT_EVENT_SELECT_PDO);
+		battery->pdic_info.sink_status.selected_pdo_num =
+			battery->pd_list.pd_info[pd_list_select].pdo_index;
 		select_pdo(battery->pd_list.pd_info[pd_list_select].pdo_index);
 	}
 
