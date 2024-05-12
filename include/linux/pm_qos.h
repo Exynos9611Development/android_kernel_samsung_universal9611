@@ -9,6 +9,7 @@
 #include <linux/notifier.h>
 #include <linux/device.h>
 #include <linux/workqueue.h>
+#include <linux/mutex.h>
 
 enum {
 	PM_QOS_RESERVED = 0,
@@ -157,6 +158,7 @@ struct pm_qos_constraints {
 	s32 no_constraint_value;
 	enum pm_qos_type type;
 	struct blocking_notifier_head *notifiers;
+	struct mutex mlock;
 };
 
 struct pm_qos_flags {
