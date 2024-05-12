@@ -571,7 +571,6 @@ int slsi_ap_prepare_add_info_ies(struct netdev_vif *ndev_vif, const u8 *ies, siz
 int slsi_set_mib_roam(struct slsi_dev *dev, struct net_device *ndev, u16 psid, int value);
 #ifdef CONFIG_SCSC_WLAN_SET_PREFERRED_ANTENNA
 int slsi_set_mib_preferred_antenna(struct slsi_dev *dev, u16 value);
-bool slsi_read_preferred_antenna_from_file(struct slsi_dev *sdev, char *ant_file);
 #endif
 void slsi_reset_throughput_stats(struct net_device *dev);
 int slsi_set_mib_rssi_boost(struct slsi_dev *sdev, struct net_device *dev, u16 psid, int index, int boost);
@@ -663,11 +662,18 @@ int slsi_configure_tx_power_sar_scenario(struct net_device *dev, int mode);
 /* Sysfs based mac address override */
 void slsi_create_sysfs_macaddr(void);
 void slsi_destroy_sysfs_macaddr(void);
+/* Sysfs based version information */
+void slsi_create_sysfs_version_info(void);
+void slsi_destroy_sysfs_version_info(void);
 #if defined(SCSC_SEP_VERSION) && SCSC_SEP_VERSION >= 12
 void slsi_create_sysfs_debug_dump(void);
 void slsi_destroy_sysfs_debug_dump(void);
 void slsi_collect_chipset_logs(struct work_struct *work);
 #endif
+void slsi_create_sysfs_pm(void);
+void slsi_destroy_sysfs_pm(void);
+void slsi_create_sysfs_ant(void);
+void slsi_destroy_sysfs_ant(void);
 int slsi_find_chan_idx(u16 chan, u8 hw_mode);
 int slsi_set_latency_mode(struct net_device *dev, int latency_mode, int cmd_len);
 void slsi_trigger_service_failure(struct work_struct *work);

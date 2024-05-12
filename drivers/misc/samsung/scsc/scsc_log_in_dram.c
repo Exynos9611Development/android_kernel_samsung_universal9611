@@ -17,10 +17,15 @@
 
 #define DEVICE_NAME "scsc_log_in_dram"
 #define N_MINORS 1
+#define SCSC_LOG_IN_DRAM_TIMEOUT 2000
 
 struct class *scsc_log_in_dram_class;
 struct cdev scsc_log_in_dram_dev[N_MINORS];
 dev_t ram_dev_num;
+
+atomic_t scsc_log_in_dram_inuse;
+struct mutex scsc_log_in_dram_mutex;
+DECLARE_COMPLETION(scsc_log_in_dram_completion);
 
 #define SCSC_LOG_MAGIC_STRING "scsc_phy"
 #define SCSC_LOG_MAGIC_STRING_SZ 8
@@ -34,15 +39,25 @@ struct scsc_log_in_dram_magic {
 
 static int scsc_log_in_dram_mmap_open(struct inode *inode, struct file *filp)
 {
-	pr_info("wlbt: in_dram. scsc_log_in_dram_mmap_open\n");
+        reinit_completion(&scsc_log_in_dram_completion);
+	mutex_lock(&scsc_log_in_dram_mutex);
+	if (!scsc_log_in_dram_ptr) {
+		pr_info("wlbt: in_dram. scsc_log_in_dram_ptr is NULL\n");
+		mutex_unlock(&scsc_log_in_dram_mutex);
+		return -ENOMEM;
+	}
 
+	atomic_inc(&scsc_log_in_dram_inuse);
+	mutex_unlock(&scsc_log_in_dram_mutex);
+	pr_info("wlbt: in_dram. scsc_log_in_dram_mmap_open [open count :%d]\n", atomic_read(&scsc_log_in_dram_inuse));
 	return 0;
 }
 
 static int scsc_log_in_dram_release(struct inode *inode, struct file *filp)
 {
-	pr_info("wlbt: in_dram. scsc_log_in_dram_release\n");
-
+	if (atomic_dec_return(&scsc_log_in_dram_inuse) == 0)
+		complete(&scsc_log_in_dram_completion);
+	pr_info("wlbt: in_dram. scsc_log_in_dram_release [open count :%d]\n", atomic_read(&scsc_log_in_dram_inuse));
 	return 0;
 }
 
@@ -99,6 +114,8 @@ int scsc_log_in_dram_mmap_create(void)
 	dev_t curr_dev;
 	void *virtual_address;
 
+	mutex_init(&scsc_log_in_dram_mutex);
+        reinit_completion(&scsc_log_in_dram_completion);
 	scsc_log_in_dram_ptr = vzalloc(MIFRAMMAN_LOG_DRAM_SZ);
 	if (IS_ERR_OR_NULL(scsc_log_in_dram_ptr)) {
 		pr_err("wlbt: in_dram. open allocating scsc_log_in_dram_ptr = %ld\n",
@@ -154,9 +171,10 @@ int scsc_log_in_dram_mmap_create(void)
 		scsc_log_in_dram_status.phy_add[i] =
 			PFN_PHYS(vmalloc_to_pfn(virtual_address));
 	}
-	pr_info("wlbt: in_dram. Log buffer physical address: %lx first entry: %lx",
+	pr_info("wlbt: in_dram. Log buffer physical address: %lx first entry: %lx file open count :%d\n",
 		virt_to_phys(&scsc_log_in_dram_status),
-		PFN_PHYS(vmalloc_to_pfn(scsc_log_in_dram_ptr)));
+		PFN_PHYS(vmalloc_to_pfn(scsc_log_in_dram_ptr)),
+		atomic_read(&scsc_log_in_dram_inuse));
 	return 0;
 
 error_class:
@@ -167,11 +185,23 @@ error:
 
 int scsc_log_in_dram_mmap_destroy(void)
 {
-	int i;
+	int i = 0, tm = SCSC_LOG_IN_DRAM_TIMEOUT / 1000;
 
-	pr_info("wlbt: in_dram. Free scsc_log_in_dram_ptr");
+	pr_info("wlbt: in_dram. Free scsc_log_in_dram_ptr [open count :%d]\n", atomic_read(&scsc_log_in_dram_inuse));
 
-	vfree(scsc_log_in_dram_ptr);
+	mutex_lock(&scsc_log_in_dram_mutex);
+	if (atomic_read(&scsc_log_in_dram_inuse) > 0) {
+		tm = wait_for_completion_timeout(&scsc_log_in_dram_completion,
+						 msecs_to_jiffies(SCSC_LOG_IN_DRAM_TIMEOUT));
+		if (tm == 0)
+			pr_info("wlbt: in_dram. Timeout happened when waiting for release. timeout:%dms\n",
+				SCSC_LOG_IN_DRAM_TIMEOUT);
+		else
+			pr_info("wlbt: in_dram. file released [remain time:%dms]\n", jiffies_to_msecs(tm));
+	}
+
+	if (tm)
+		vfree(scsc_log_in_dram_ptr);
 	scsc_log_in_dram_ptr = NULL;
 
 	device_destroy(scsc_log_in_dram_class, ram_dev_num);
@@ -179,5 +209,6 @@ int scsc_log_in_dram_mmap_destroy(void)
 		cdev_del(&scsc_log_in_dram_dev[i]);
 	class_destroy(scsc_log_in_dram_class);
 	unregister_chrdev_region(ram_dev_num, N_MINORS);
+	mutex_unlock(&scsc_log_in_dram_mutex);
 	return 0;
 }

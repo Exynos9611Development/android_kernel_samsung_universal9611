@@ -671,12 +671,15 @@ int __init slsi_dev_load(void)
 /* Always create devnode if TW Android P on */
 #if defined(SCSC_SEP_VERSION) && SCSC_SEP_VERSION >= 9
 	slsi_create_sysfs_macaddr();
+	slsi_create_sysfs_version_info();
 #endif
 #if defined(SCSC_SEP_VERSION) && SCSC_SEP_VERSION >= 12
 	slsi_create_sysfs_debug_dump();
 	scsc_wlan_mmap_create();
 #endif
-	SLSI_INFO_NODEV("--- Maxwell Wi-Fi driver loaded successfully---\n");
+	slsi_create_sysfs_pm();
+	slsi_create_sysfs_ant();
+	SLSI_INFO_NODEV("--- Maxwell Wi-Fi driver loaded successfully ---\n");
 	return 0;
 }
 
@@ -686,11 +689,14 @@ void __exit slsi_dev_unload(void)
 
 #if defined(SCSC_SEP_VERSION) && SCSC_SEP_VERSION >= 9
 	slsi_destroy_sysfs_macaddr();
+	slsi_destroy_sysfs_version_info();
 #endif
 #if defined(SCSC_SEP_VERSION) && SCSC_SEP_VERSION >= 12
 	scsc_wlan_mmap_destroy();
 	slsi_destroy_sysfs_debug_dump();
 #endif
+	slsi_destroy_sysfs_pm();
+	slsi_destroy_sysfs_ant();
 	/* Unregister SAPs */
 	sap_mlme_deinit();
 	sap_ma_deinit();
