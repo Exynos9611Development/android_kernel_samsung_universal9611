@@ -1588,18 +1588,6 @@
 		linux,phandle = <0x101>;
 		phandle = <0x101>;
 
-		seclog_mem {
-			compatible = "exynos,seclog";
-			reg = <0x0 0xc0000000 0x80000>;
-		};
-
-		abox_rmem@0xE9400000 {
-			compatible = "exynos,abox_rmem";
-			reg = <0x0 0xe9400000 0x2800000>;
-			linux,phandle = <0x72>;
-			phandle = <0x72>;
-		};
-
 		ion_video_stream {
 			compatible = "exynos9820-ion";
 			size = <0x4800000>;
@@ -1621,19 +1609,9 @@
 			ion,alignment = <0x10000>;
 		};
 
-		sec_debug_magic {
-			compatible = "exynos,sec_debug_magic";
-			reg = <0x0 0x80000000 0x1000>;
-		};
-
 		modem_if {
 			compatible = "exynos,modem_if";
 			reg = <0x0 0xed000000 0x8a00000>;
-		};
-
-		cp_ram_logging {
-			compatible = "exynos,cp_ram_logging";
-			reg = <0x0 0xf5a00000 0x1e00000>;
 		};
 
 		chub_rmem {
@@ -1641,51 +1619,6 @@
 			reg = <0x0 0xfd000000 0x80000>;
 			linux,phandle = <0x102>;
 			phandle = <0x102>;
-		};
-
-		debug_snapshot {
-			#address-cells = <0x2>;
-			#size-cells = <0x1>;
-
-			header {
-				compatible = "debug-snapshot,header";
-				reg = <0x0 0xf9000000 0x10000>;
-			};
-
-			log_kernel {
-				compatible = "debug-snapshot,log_kernel";
-				reg = <0x0 0xf9010000 0x200000>;
-			};
-
-			log_platform {
-				compatible = "debug-snapshot,log_platform";
-				reg = <0x0 0xf9210000 0x400000>;
-			};
-
-			log_sfr {
-				compatible = "debug-snapshot,log_sfr";
-				reg = <0x0 0xf9610000 0x200000>;
-			};
-
-			log_cachedump {
-				compatible = "debug-snapshot,log_cachedump";
-				reg = <0x0 0xf9810000 0x100000>;
-			};
-
-			log_bcm {
-				compatible = "debug-snapshot,log_bcm";
-				reg = <0x0 0xf9910000 0x400000>;
-			};
-
-			log_pstore {
-				compatible = "debug-snapshot,log_pstore";
-				reg = <0x0 0xf9d10000 0x200000>;
-			};
-
-			log_kevents {
-				compatible = "debug-snapshot,log_kevents";
-				reg = <0x0 0xf9f10000 0x800000>;
-			};
 		};
 
 		gnss_if {
@@ -4427,14 +4360,6 @@
 			phandle = <0x165>;
 		};
 
-		abox_debug@0 {
-			compatible = "samsung,abox-debug";
-			memory-region = <0x72>;
-			reg = <0x0 0x0 0x0>;
-			linux,phandle = <0x166>;
-			phandle = <0x166>;
-		};
-
 		abox_vss@0 {
 			compatible = "samsung,abox-vss";
 			magic_offset = <0x600000>;
@@ -5861,7 +5786,7 @@
 		gpu_pmqos_mif_max_clock = <0x1fefc8>;
 		gpu_pmqos_mif_max_clock_base = <0x8ba60>;
 		gpu_cl_dvfs_start_base = <0x8ba60>;
-		gpu_debug_level = <0x3>;
+		gpu_debug_level = <0x4>;
 		gpu_trace_level = <0x8>;
 		gpu_bts_support = <0x1>;
 		gpu_mo_min_clock = <0xba860>;
@@ -6280,7 +6205,6 @@
 		spi0_cs_func = "/pinctrl@11080000/spi0-cs-func";
 		uart1_bus_single = "/pinctrl@11080000/uart1-bus";
 		reserved_memory = "/reserved-memory";
-		abox_rmem = "/reserved-memory/abox_rmem@0xE9400000";
 		chub_rmem = "/reserved-memory/chub_rmem";
 		gnss_reserved = "/reserved-memory/gnss_if";
 		sysmmu_vipx1 = "/sysmmu@10C50000";
@@ -6431,7 +6355,6 @@
 		abox_dsif = "/abox@0x14A50000/abox_dsif@0x14A50550";
 		abox_spdy = "/abox@0x14A50000/abox_spdy@0x14A50560";
 		abox_effect = "/abox@0x14A50000/abox_effect@0x14B2C000";
-		abox_debug = "/abox@0x14A50000/abox_debug@0";
 		abox_vss = "/abox@0x14A50000/abox_vss@0";
 		abox_synchronized_ipc = "/abox@0x14A50000/abox_synchronized_ipc@0";
 		abox_bt = "/abox@0x14A50000/abox_bt@0";
