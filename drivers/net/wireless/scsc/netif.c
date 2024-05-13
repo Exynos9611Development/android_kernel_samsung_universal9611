@@ -328,9 +328,6 @@ static int slsi_net_open(struct net_device *dev)
 
 	slsi_wake_lock(&sdev->wlan_wl_init);
 
-	/* check if request to rf test mode. */
-	slsi_check_rf_test_mode();
-
 	SLSI_MUTEX_LOCK(ndev_vif->vif_mutex);
 	if (!sdev->netdev_up_count ) {
 		slsi_purge_blacklist(ndev_vif);
