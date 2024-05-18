@@ -1,0 +1,31 @@
+# Copyright (C) 2022 John Vincent
+# This file is part of the Fresh Project <https://github.com/FreshROMs>.
+#
+# This is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with other components of the Fresh Project. If not, see <http://www.gnu.org/licenses/>.
+# FOR ONEUI ONLY
+on init
+    chown system system /sys/devices/platform/11500000.mali/power_policy
+    chown system system /sys/devices/platform/11500000.mali/highspeed_clock
+    chown system system /sys/devices/platform/11500000.mali/highspeed_load
+
+    chmod 0644 /sys/devices/platform/11500000.mali/power_policy
+    chmod 0644 /sys/devices/platform/11500000.mali/highspeed_clock
+    chmod 0644 /sys/devices/platform/11500000.mali/highspeed_load
+
+on property:sys.boot_completed=1
+
+    write /proc/sys/vm/swappiness 60
+    write /sys/devices/platform/11500000.mali/power_policy adaptive
+    write /sys/devices/platform/11500000.mali/highspeed_clock 764000
+    write /sys/devices/platform/11500000.mali/highspeed_load 75

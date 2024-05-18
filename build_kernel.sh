@@ -9,7 +9,7 @@ export LLVM=1
 PATH=$PWD/toolchain/bin:$PATH
 export LLVM_DIR=$PWD/toolchain/bin
 export kerneldir=$PWD
-export ANYKERNEL=$PWD/scripts/packaging/AnyKernel3
+export ANYKERNEL=$PWD/tools/package/AnyKernel3
 export TIME="$(date "+%Y%m%d")"
 
 if [[ -z "$ROM" || "$ROM" = "aosp" ]]; then
@@ -78,6 +78,7 @@ echo "  done"
 echo ""
 echo "  Copying Stuff"
 
+cp -r tools/package/init.${ROM}.rc ${ANYKERNEL}/init.grass.rc
 cp -r out/arch/arm64/boot/Image ${ANYKERNEL}/Image
 cp -r out/.config ${ANYKERNEL}/config
 echo "  done"
