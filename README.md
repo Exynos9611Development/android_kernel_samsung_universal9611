@@ -12,7 +12,6 @@
 <p align="center">
   <a href="#key-features">Key Features</a> •
   <a href="#how-to-build">How To Build</a> •
-  <a href="#how-to-flash">How To Flash</a> •
   <a href="#credits">Credits</a>
 </p>
 
@@ -32,19 +31,10 @@
 You will need ubuntu, git, around 8GB RAM and bla-bla-bla...
 
 ```bash
-# Install dependencies
-$ sudo apt install -y bash git make libssl-dev curl bc pkg-config m4 libtool automake autoconf
-
-# Clone this repository
-$ git clone https://github.com/Gojikovi/kernel_samsung_universal9611
-
-# Go into the repository
-$ cd kernel_samsung_universal9611
-
-# Install toolchain
-# You could try any clang/LLVM based toolchain, however I use neutron clang
-# If you are using Arch or distro with latest glibc, You may want to use antman instead.
-$ bash <(curl https://gist.githubusercontent.com/roynatech2544/0feeeb35a6d1782b186990ff2a0b3657/raw/b170134a94dac3594df506716bc7b802add2724b/setup.sh)
+sudo apt install -y bash git make libssl-dev curl bc pkg-config m4 libtool automake autoconf
+git clone https://github.com/Exynos9611Development/android_kernel_samsung_universal9611 -b Grass-Test
+cd android_kernel_samsung_universal9611
+bash <(curl https://gist.githubusercontent.com/Royna2544/0feeeb35a6d1782b186990ff2a0b3657/raw/b170134a94dac3594df506716bc7b802add2724b/setup.sh)
 
 # If you want to compile the kernel not for A51 then export DEVICE variable to m21, m31, m31s, f41
 # Build the kernel
@@ -55,13 +45,10 @@ $ DEVICE=m21 ./build_kernel.sh aosp # (for M21, AOSP)
 
 After build the image of the kernel will be in out/arch/arm64/boot/Image
 
-## How To Flash
-
-After a successful build, you can see the scripts/packaging/Grass*.zip archive.
-This is your kernel. Just flash it via TWRP or adb sideload
-
 ## Credits
 
+- [cat658011](https://github.com/cat658011)
+- [ghazzor](https://github.com/ghazzor)
 - [roynatech2544](https://github.com/roynatech2544)
 - [Samsung Open Source](https://opensource.samsung.com/)
 - [Android Open Source Project](https://source.android.com/)
