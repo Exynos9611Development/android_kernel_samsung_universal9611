@@ -993,18 +993,13 @@ static int exynos_adc_probe(struct platform_device *pdev)
 		}
 	}
 
+	/* leave out any TS related code if unreachable */
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0) {
 		dev_err(&pdev->dev, "no irq resource?\n");
 		return irq;
 	}
 	info->irq = irq;
-
-	irq = platform_get_irq(pdev, 1);
-	if (irq == -EPROBE_DEFER)
-		return irq;
-
-	info->tsirq = irq;
 
 	info->dev = &pdev->dev;
 #ifdef CONFIG_ARCH_EXYNOS_PM
