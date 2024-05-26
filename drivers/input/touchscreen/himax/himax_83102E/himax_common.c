@@ -705,8 +705,8 @@ int himax_common_proc_init(void)
 #ifdef HX_SMART_WAKEUP
 #ifdef HX_P_SENSOR
 fail_5:
-#endif
 	remove_proc_entry(HIMAX_PROC_GESTURE_FILE, himax_touch_proc_dir);
+#endif
 fail_4:
 	remove_proc_entry(HIMAX_PROC_SMWP_FILE, himax_touch_proc_dir);
 fail_3:
@@ -738,6 +738,34 @@ remove_proc_entry(HIMAX_PROC_SELF_TEST_FILE, himax_touch_proc_dir);
 
 /* File node for SMWP and HSEN - End*/
 
+static void himax_set_input_prop(struct himax_ts_data *ts, struct input_dev *dev, u8 propbit)
+{
+	set_bit(EV_SYN, dev->evbit);
+	set_bit(EV_KEY, dev->evbit);
+	set_bit(EV_ABS, dev->evbit);
+	set_bit(EV_SW, dev->evbit);
+	set_bit(BTN_TOUCH, dev->keybit);
+	set_bit(BTN_TOOL_FINGER, dev->keybit);
+	set_bit(KEY_INT_CANCEL, dev->keybit);
+
+	set_bit(propbit, dev->propbit);
+
+	input_set_abs_params(dev, ABS_MT_POSITION_X, ts->pdata->abs_x_min, ts->pdata->abs_x_max, ts->pdata->abs_x_fuzz, 0);
+	input_set_abs_params(dev, ABS_MT_POSITION_Y, ts->pdata->abs_y_min, ts->pdata->abs_y_max, ts->pdata->abs_y_fuzz, 0);
+	input_set_abs_params(dev, ABS_MT_TOUCH_MAJOR, ts->pdata->abs_pressure_min, ts->pdata->abs_pressure_max, ts->pdata->abs_pressure_fuzz, 0);
+#if defined(SEC_PALM_FUNC)
+	input_set_abs_params(dev, ABS_MT_TOUCH_MINOR, ts->pdata->abs_pressure_min, ts->pdata->abs_pressure_max, ts->pdata->abs_pressure_fuzz, 0);
+	input_set_abs_params(dev, ABS_MT_CUSTOM, 0, 1, 0, 0);
+#endif
+
+	if (propbit == INPUT_PROP_POINTER)
+		input_mt_init_slots(dev, ts->nFinger_support, INPUT_MT_POINTER);
+	else
+		input_mt_init_slots(dev, ts->nFinger_support, INPUT_MT_DIRECT);
+
+	input_set_drvdata(dev, ts);
+}
+
 int himax_input_register(struct himax_ts_data *ts)
 {
 	int ret = 0;
@@ -749,7 +777,7 @@ int himax_input_register(struct himax_ts_data *ts)
 	if (ret < 0) {
 		I("%s, input device register fail!\n", __func__);
 		ret = INPUT_REGISTER_FAIL;
-		goto input_device_fail;
+		return ret;
 	}
 
 	set_bit(EV_SYN, ts->input_dev->evbit);
@@ -770,10 +798,10 @@ int himax_input_register(struct himax_ts_data *ts)
 	set_bit(KEY_POWER, ts->input_dev->keybit);
 #endif
 	set_bit(BTN_TOUCH, ts->input_dev->keybit);
-	set_bit(INPUT_PROP_DIRECT, ts->input_dev->propbit);
 #if defined(HX_EN_SEL_BUTTON) || defined(HX_EN_MUT_BUTTON)
 	set_bit(KEY_APPSELECT, ts->input_dev->keybit);
 #endif
+	set_bit(INPUT_PROP_DIRECT, ts->input_dev->propbit);
 #ifdef	HX_PROTOCOL_A
 	/*ts->input_dev->mtsize = ts->nFinger_support;*/
 	input_set_abs_params(ts->input_dev, ABS_MT_TRACKING_ID, 0, 3, 0, 0);
@@ -798,10 +826,12 @@ int himax_input_register(struct himax_ts_data *ts)
  *	input_set_abs_params(ts->input_dev, ABS_MT_POSITION, 0, (BIT(31) | (ts->pdata->abs_x_max << 16) | ts->pdata->abs_y_max), 0, 0);
  */
 
-	if (himax_input_register_device(ts->input_dev) == 0)
+	if (input_register_device(ts->input_dev) == 0)
 		ret = NO_ERR;
-	else
+	else {
 		ret = INPUT_REGISTER_FAIL;
+		return ret;
+	}
 
 #if defined(HX_PEN_FUNC_EN)
 	set_bit(EV_SYN, ts->hx_pen_dev->evbit);
@@ -826,15 +856,26 @@ int himax_input_register(struct himax_ts_data *ts)
 	input_set_abs_params(ts->hx_pen_dev, ABS_X, ts->pdata->abs_x_min, ts->pdata->abs_x_max, ts->pdata->abs_x_fuzz, 0);
 	input_set_abs_params(ts->hx_pen_dev, ABS_Y, ts->pdata->abs_y_min, ts->pdata->abs_y_max, ts->pdata->abs_y_fuzz, 0);
 
-	if (himax_input_register_device(ts->hx_pen_dev) == 0)
+	if (input_register_device(ts->hx_pen_dev) == 0)
 		ret = NO_ERR;
-	else
+	else {
 		ret = INPUT_REGISTER_FAIL;
+		return ret;
+	}
 
 #endif
+
+	himax_set_input_prop(ts, ts->input_dev_pad, INPUT_PROP_POINTER);
+
+	if (input_register_device(ts->input_dev_pad) == 0)
+		ret = NO_ERR;
+	else {
+		ret = INPUT_REGISTER_FAIL;
+		return ret;
+	}
+
 	I("%s, input device registered.\n", __func__);
 
-input_device_fail:
 	return ret;
 }
 EXPORT_SYMBOL(himax_input_register);
@@ -3151,7 +3192,14 @@ err_report_data_init_failed:
 err_get_intr_bit_failed:
 #endif
 err_input_register_device_failed:
-	input_free_device(ts->input_dev);
+	if (ts->input_dev)
+		input_free_device(ts->input_dev);
+#if defined(HX_PEN_FUNC_EN)
+	if (ts->hx_pen_dev)
+		input_free_device(ts->hx_pen_dev);
+#endif
+	if (ts->input_dev_pad)
+		input_free_device(ts->input_dev_pad);
 err_detect_failed:
 
 #ifdef HX_CONTAINER_SPEED_UP
