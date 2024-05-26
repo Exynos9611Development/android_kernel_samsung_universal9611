@@ -513,6 +513,11 @@ endif
 export ONEUI
 
 PLATFORM_VERSION := 12
+
+ifeq ($(DEVICE), gta4xl)
+PLATFORM_VERSION := 13
+endif
+
 ifneq ($(PLATFORM_VERSION), )
 PLATFORM_VERSION_NUMBER=$(shell $(CONFIG_SHELL) $(srctree)/scripts/android-version.sh $(PLATFORM_VERSION))
 MAJOR_VERSION=$(shell $(CONFIG_SHELL) $(srctree)/scripts/android-major-version.sh $(PLATFORM_VERSION))
