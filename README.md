@@ -46,7 +46,7 @@ $ cd kernel_samsung_universal9611
 # If you are using Arch or distro with latest glibc, You may want to use antman instead.
 $ bash <(curl https://gist.githubusercontent.com/roynatech2544/0feeeb35a6d1782b186990ff2a0b3657/raw/b170134a94dac3594df506716bc7b802add2724b/setup.sh)
 
-# If you want to compile the kernel not for A51 then export DEVICE variable to m21, m31, m31s, f41
+# If you want to compile the kernel not for A51 then export DEVICE variable to m21, m31, m31s, f41, gta4xl
 # Build the kernel
 $ ./build_kernel.sh aosp # (for AOSP)
 $ ./build_kernel.sh oneui # (for OneUI)
