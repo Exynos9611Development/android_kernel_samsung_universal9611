@@ -50,11 +50,17 @@ int himax_dev_set(struct himax_ts_data *ts)
 
 	ts->hx_pen_dev->name = "himax-pen";
 #endif
+
+	ts->input_dev_pad = input_allocate_device();
+	if (ts->input_dev_pad == NULL) {
+		ret = -ENOMEM;
+		E("%s: Failed to allocate input device-hx_dex_dev\n", __func__);
+		return ret;
+	}
+
+		ts->input_dev_pad->name = "sec_touchpad";
+
 	return ret;
-}
-int himax_input_register_device(struct input_dev *input_dev)
-{
-	return input_register_device(input_dev);
 }
 
 #if defined(HX_PLATFOME_DEFINE_KEY)

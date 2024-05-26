@@ -48,10 +48,6 @@ int himax_dev_set(struct himax_ts_data *ts)
 #endif
 	return ret;
 }
-int himax_input_register_device(struct input_dev *input_dev)
-{
-	return input_register_device(input_dev);
-}
 
 #if defined(HX_PLATFOME_DEFINE_KEY)
 void himax_platform_key(void)

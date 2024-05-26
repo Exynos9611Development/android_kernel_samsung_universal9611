@@ -458,6 +458,7 @@ struct himax_ts_data {
 #if defined(HX_PEN_FUNC_EN)
 	struct input_dev *hx_pen_dev;
 #endif
+	struct input_dev *input_dev_pad;
 	struct hrtimer timer;
 	struct i2c_client *client;
 	struct himax_i2c_platform_data *pdata;
