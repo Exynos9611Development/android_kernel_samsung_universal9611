@@ -31,7 +31,7 @@ jobs:
           echo "OBJ=arch/arm64/boot/Image" >> local.config
       - name: Run build
         run: |
-          DEVICE=a51 bash build_kernel.sh aosp ksu
+          DEVICE=a51 bash build_kernel.sh oneui ksu
       - name: Upload kernel
         uses: actions/upload-artifact@v3.1.2
         with:
