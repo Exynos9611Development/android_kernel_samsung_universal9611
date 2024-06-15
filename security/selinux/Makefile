@@ -26,5 +26,5 @@ targets += flask.h av_permissions.h
 # which basically involves adding both headers and a '&' before the colon, see
 # the example below:
 #   $(obj)/flask.h $(obj)/av_permissions.h &: scripts/selinux/...
-$(obj)/flask.h: scripts/selinux/genheaders/genheaders FORCE
+$(obj)/flask.h $(obj)/av_permissions.h &: scripts/selinux/genheaders/genheaders FORCE
 	$(call if_changed,flask)

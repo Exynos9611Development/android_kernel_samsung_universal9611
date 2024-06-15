@@ -44,3 +44,4 @@ ccflags-y += -I$(srctree)/drivers/media/dvb-core
 ccflags-y += -I$(srctree)/drivers/media/dvb-frontends
 ccflags-y += -I$(srctree)/drivers/media/tuners
 
+ccflags-y := $(call cc-disable-warning, incompatible-pointer-types)
