@@ -22,6 +22,7 @@ struct mms_ts_info *tui_tsp_info;
 #ifdef CONFIG_SAMSUNG_TUI
 struct mms_ts_info *tsp_info;
 #endif
+#include <linux/spu-verify.h>
 
 /**
  * Reboot chip
@@ -1104,7 +1105,6 @@ ERROR:
 /**
  * Update firmware from external storage
  */
-extern int long spu_firmware_signature_verify(const char* fw_name, const u8* fw_data, const long fw_size);
 int mms_fw_update_from_storage(struct mms_ts_info *info, bool force, bool signing, const char *file_path)
 {
 	struct file *fp;

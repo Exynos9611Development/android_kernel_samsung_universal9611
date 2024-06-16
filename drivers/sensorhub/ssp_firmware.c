@@ -23,6 +23,7 @@
 #include <linux/mm.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
+#include <linux/spu-verify.h>
 
 enum fw_type {
 	FW_TYPE_NONE,
@@ -40,7 +41,6 @@ enum fw_type {
 #define SPU_FW_FILE "/spu/sensorhub/shub_spu.bin"
 
 #define FW_VER_LEN 8
-extern long spu_firmware_signature_verify(const char *fw_name, const u8 *fw_data, const long fw_size);
 
 static int request_spu_firmware(struct ssp_data *data, u8 **fw_buf)
 {
