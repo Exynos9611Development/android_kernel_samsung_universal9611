@@ -43,6 +43,7 @@ def main():
     parser.add_argument('--aosp', action='store_true', help="AOSP variant")
     parser.add_argument('--target', type=str, required=True, help="Target device (a51/m21/...)")
     parser.add_argument('--no-ksu', action='store_true', help="Don't include KernelSU support in kernel")
+    parser.add_argument('--allow-dirty', action='store_true', help="Allow dirty build")
 
     # Parse the arguments
     args = parser.parse_args()
@@ -96,7 +97,7 @@ def main():
     if tcPath not in os.environ['PATH'].split(os.pathsep):
         os.environ["PATH"] += ':' + tcPath
     
-    if os.path.exists('out'):
+    if os.path.exists('out') and not args.allow_dirty:
         print('Make clean...')
         shutil.rmtree('out')
     

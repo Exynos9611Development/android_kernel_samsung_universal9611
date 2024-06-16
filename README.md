@@ -49,7 +49,7 @@ $ bash <(curl https://gist.githubusercontent.com/roynatech2544/0feeeb35a6d1782b1
 # Building kernel is simple, a python script is provided.
 # Options inside parenthesis are optional, Parenthesis' with | between 
 # means you have to provide one of those options inside.
-$ python build_kernel.py (--aosp|--oneui) --target=a51 (--no-ksu)
+$ python build_kernel.py (--aosp|--oneui) --target=a51 (--no-ksu) (--allow-dirty)
 ```
 
 After build the image of the kernel will be in out/arch/arm64/boot/Image
