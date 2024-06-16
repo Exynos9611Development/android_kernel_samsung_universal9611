@@ -188,9 +188,11 @@ static int module_gc5035_power_setpin(struct device *dev,
 
 	use_2nd_module = of_property_read_bool(dnode, "use_2nd_module");
 	if (use_2nd_module) {
+#if defined GC5035_2ND_IOVDD && defined GC5035_2ND_AVDD && defined GC5035_2ND_DVDD
 		iovdd_pin.name = GC5035_2ND_IOVDD;
 		avdd_pin.name  = GC5035_2ND_AVDD;
 		dvdd_pin.name  = GC5035_2ND_DVDD;
+#endif
 	} else {
 		iovdd_pin.name = GC5035_IOVDD;
 		avdd_pin.name  = GC5035_AVDD;
