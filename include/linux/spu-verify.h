@@ -26,6 +26,12 @@
 /* TOTAL METADATA SIZE */
 #define SPU_METADATA_SIZE(FW) 	( (TAG_LEN(FW)) + (DIGEST_LEN) + (SIGN_LEN) )
 
+#ifdef CONFIG_SPU_VERIFY
 extern long spu_firmware_signature_verify(const char* fw_name, const u8* fw_data, const long fw_size);
+#else
+static inline long spu_firmware_signature_verify(const char* fw_name, const u8* fw_data, const long fw_size) {
+	return -1L;
+}
+#endif
 
 #endif //end _SPU_VERIFY_H_
