@@ -910,6 +910,7 @@ static void hip4_watchdog(unsigned long data)
 	unsigned long           flags;
 #ifdef CONFIG_SCSC_WLAN_RX_NAPI
 	bool retrigger_watchdog = true;
+	u8 i;
 #endif
 
 	if (!hip || !sdev || !sdev->service || !hip->hip_priv)
@@ -972,7 +973,7 @@ static void hip4_watchdog(unsigned long data)
 	SLSI_INFO_NODEV("Hip4 watchdog triggered\n");
 
 #ifdef CONFIG_SCSC_WLAN_RX_NAPI
-	for (u8 i = 0; i < MIF_HIP_CFG_Q_NUM; i++) {
+	for (i = 0; i < MIF_HIP_CFG_Q_NUM; i++) {
 		if (hip->hip_priv->intr_tohost_mul[i] == MIF_NO_IRQ)
 			continue;
 		if (scsc_service_mifintrbit_bit_mask_status_get(service) & (1 << hip->hip_priv->intr_tohost_mul[i])) {
@@ -2813,6 +2814,9 @@ void hip4_suspend(struct slsi_hip4 *hip)
 {
 	struct slsi_dev *sdev;
 	struct scsc_service *service;
+#ifdef CONFIG_SCSC_WLAN_RX_NAPI
+	u8 i;
+#endif
 
 	if (!hip || !hip->hip_priv)
 		return;
@@ -2832,7 +2836,7 @@ void hip4_suspend(struct slsi_hip4 *hip)
 	atomic_set(&hip->hip_priv->in_suspend, 1);
 
 #ifdef CONFIG_SCSC_WLAN_RX_NAPI
-	for (u8 i = 0; i < MIF_HIP_CFG_Q_NUM; i++)
+	for (i = 0; i < MIF_HIP_CFG_Q_NUM; i++)
 		if (hip->hip_priv->intr_tohost_mul[i] != MIF_NO_IRQ)
 			scsc_service_mifintrbit_bit_unmask(service, hip->hip_priv->intr_tohost_mul[i]);
 #else
@@ -2844,6 +2848,9 @@ void hip4_resume(struct slsi_hip4 *hip)
 {
 	struct slsi_dev *sdev;
 	struct scsc_service *service;
+#ifdef CONFIG_SCSC_WLAN_RX_NAPI
+	u8 i;
+#endif
 
 	if (!hip || !hip->hip_priv)
 		return;
@@ -2858,7 +2865,7 @@ void hip4_resume(struct slsi_hip4 *hip)
 	service = sdev->service;
 
 #ifdef CONFIG_SCSC_WLAN_RX_NAPI
-	for (u8 i = 0; i < MIF_HIP_CFG_Q_NUM; i++)
+	for (i = 0; i < MIF_HIP_CFG_Q_NUM; i++)
 		if (hip->hip_priv->intr_tohost_mul[i] != MIF_NO_IRQ)
 			scsc_service_mifintrbit_bit_unmask(service, hip->hip_priv->intr_tohost_mul[i]);
 #else
@@ -2873,6 +2880,9 @@ void hip4_freeze(struct slsi_hip4 *hip)
 {
 	struct slsi_dev *sdev;
 	struct scsc_service *service;
+#ifdef CONFIG_SCSC_WLAN_RX_NAPI
+	u8 i;
+#endif
 
 	if (!hip || !hip->hip_priv)
 		return;
@@ -2891,7 +2901,7 @@ void hip4_freeze(struct slsi_hip4 *hip)
 
 	hip4_dump_dbg(hip, NULL, NULL, service);
 #ifdef CONFIG_SCSC_WLAN_RX_NAPI
-	for (u8 i = 0; i < MIF_HIP_CFG_Q_NUM; i++)
+	for (i = 0; i < MIF_HIP_CFG_Q_NUM; i++)
 		if (hip->hip_priv->intr_tohost_mul[i] != MIF_NO_IRQ)
 			scsc_service_mifintrbit_bit_mask(service, hip->hip_priv->intr_tohost_mul[i]);
 
