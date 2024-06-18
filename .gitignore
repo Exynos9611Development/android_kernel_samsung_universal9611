@@ -127,8 +127,10 @@ all.config
 kernel/configs/android-*.cfg
 
 # Scripts
-local.config
 !.github/
+
+# Log files
+*.log
 
 # Kernel Build
 out/
