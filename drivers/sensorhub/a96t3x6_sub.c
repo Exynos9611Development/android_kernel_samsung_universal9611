@@ -458,6 +458,38 @@ static void a96t3x6_grip_sw_reset(struct a96t3x6_data *data)
 		usleep_range(35000, 35000);
 }
 
+static int a96t3x6_get_hallic_state(struct a96t3x6_data *data)
+{
+	char hall_buf[6];
+	int ret = -ENODEV;
+	int hall_state = -1;
+	mm_segment_t old_fs;
+	struct file *filep;
+
+	memset(hall_buf, 0, sizeof(hall_buf));
+	old_fs = get_fs();
+	set_fs(KERNEL_DS);
+
+	filep = filp_open(HALL_PATH, O_RDONLY, 0666);
+	if (IS_ERR(filep)) {
+		set_fs(old_fs);
+		return hall_state;
+	}
+
+	ret = filep->f_op->read(filep, hall_buf,
+		sizeof(hall_buf) - 1, &filep->f_pos);
+	if (ret != sizeof(hall_buf) - 1)
+		goto exit;
+
+	if (strcmp(hall_buf, "CLOSE") == 0)
+		hall_state = HALL_CLOSE_STATE;
+
+exit:
+	filp_close(filep, current->files);
+	set_fs(old_fs);
+
+	return hall_state;
+}
 #ifdef CONFIG_SENSORS_FW_VENDOR
 static void a96t3x6_firmware_work_func(struct work_struct *work)
 {
@@ -488,7 +520,8 @@ static void a96t3x6_debug_work_func(struct work_struct *work)
 	struct a96t3x6_data *data = container_of((struct delayed_work *)work,
 		struct a96t3x6_data, debug_work);
 
-	static bool hall_prev_state;
+	static int hall_prev_state;
+	int hall_state;
 
 	if (data->resume_called == true) {
 		data->resume_called = false;
@@ -496,11 +529,12 @@ static void a96t3x6_debug_work_func(struct work_struct *work)
 		schedule_delayed_work(&data->debug_work, msecs_to_jiffies(1000));
 		return;
 	}
-	if (!sec_flip_cover && hall_prev_state) {
+	hall_state = a96t3x6_get_hallic_state(data);
+	if (hall_state == HALL_CLOSE_STATE && hall_prev_state != hall_state) {
 		GRIP_INFO("hall is closed\n");
 		a96t3x6_grip_sw_reset(data);
 	}
-	hall_prev_state = sec_flip_cover;
+	hall_prev_state = hall_state;
 
 	if (data->current_state) {
 #ifdef CONFIG_SEC_FACTORY

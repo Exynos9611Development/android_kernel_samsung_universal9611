@@ -76,15 +76,12 @@
 
 #define TK_FW_PATH_BIN "abov/abov_noble.fw"
 #define TK_FW_PATH_SDCARD "/sdcard/Firmware/GripSub/abov_fw.bin"
-<<<<<<< HEAD
-=======
 #if IS_ENABLED(CONFIG_HALL_NEW_NODE)
 #define HALL_PATH	"/sys/class/sec/hall_ic/hall_detect"
 #else
 #define HALL_PATH	"/sys/class/sec/sec_key/hall_detect"
 #endif
 #define HALL_CLOSE_STATE        1
->>>>>>> f50bdcc06c3e (exynos9611: import P610XXU2CUBB kernel source)
 
 #define I2C_M_WR 0		/* for i2c */
 #define GRIP_LOG_TIME	15 /* 30s */
