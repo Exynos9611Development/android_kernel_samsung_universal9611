@@ -557,8 +557,8 @@ CONFIG_SECCOMP=y
 CONFIG_FORCE_MAX_ZONEORDER=11
 # CONFIG_UNMAP_KERNEL_AT_EL0 is not set
 CONFIG_HARDEN_BRANCH_PREDICTOR=y
-CONFIG_ARM64_SSBD=y
-CONFIG_MITIGATE_SPECTRE_BRANCH_HISTORY=y
+# CONFIG_ARM64_SSBD is not set
+# CONFIG_MITIGATE_SPECTRE_BRANCH_HISTORY is not set
 CONFIG_ARMV8_DEPRECATED=y
 CONFIG_SWP_EMULATION=y
 CONFIG_CP15_BARRIER_EMULATION=y
@@ -587,7 +587,7 @@ CONFIG_RANDOMIZE_MODULE_REGION_FULL=y
 #
 # Boot options
 #
-CONFIG_CMDLINE="quiet androidboot.init_fatal_panic=true androidboot.init_fatal_reboot_target=recovery rcu_nocbs=0-7 noirqdebug nosoftlockup mce=ignore_ce cgroup_disable=pressure"
+CONFIG_CMDLINE="quiet androidboot.init_fatal_panic=true androidboot.init_fatal_reboot_target=recovery rcu_nocbs=0-7 mitigations=off noirqdebug nosoftlockup mce=ignore_ce cgroup_disable=pressure"
 # CONFIG_CMDLINE_FROM_BOOTLOADER is not set
 CONFIG_CMDLINE_EXTEND=y
 # CONFIG_EFI is not set
