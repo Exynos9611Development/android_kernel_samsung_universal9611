@@ -217,6 +217,14 @@ config SEC_AUTO_INPUT
 	  To compile this driver as a module, choose M here: the
 	  module will be called autoinput.
 
+config ONEUI
+    bool "Enable OneUI input drivers"
+    default n
+    help
+      This option enables input drivers for OneUI.
+	  Say Y here if you use OneUI.
+	  If unsure, say N.
+
 comment "Input Device Drivers"
 
 source "drivers/input/keyboard/Kconfig"
