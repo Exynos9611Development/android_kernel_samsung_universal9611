@@ -530,10 +530,16 @@ show_map_vma(struct seq_file *m, struct vm_area_struct *vma, int is_pid)
 	const char *name = NULL;
 
 	if (file) {
-		struct inode *inode = file_inode(vma->vm_file);
-		dev = inode->i_sb->s_dev;
-		ino = inode->i_ino;
-		pgoff = ((loff_t)vma->vm_pgoff) << PAGE_SHIFT;
+    	struct inode *inode = file_inode(vma->vm_file);
+    	struct dentry *dentry;
+    	dev = inode->i_sb->s_dev;
+    	ino = inode->i_ino;
+    	pgoff = ((loff_t)vma->vm_pgoff) << PAGE_SHIFT;
+    	dentry = file->f_path.dentry;
+    	if (dentry) {
+        	const char *path = (const char *)dentry->d_name.name; 
+            	if (strstr(path, "lineage")) { return; }
+            	}
 	}
 
 	start = vma->vm_start;
