@@ -61,6 +61,7 @@ def main():
     parser.add_argument('--target', type=str, required=True, help="Target device (a51/m21/...)")
     parser.add_argument('--allow-dirty', action='store_true', help="Allow dirty build")
     parser.add_argument('--oneui', action='store_true', help="OneUI build")
+    parser.add_argument('--permissive', action='store_true', help="Use SELinux permissive mode")
     args = parser.parse_args()
     
     valid_targets = ['a51', 'f41', 'm31s', 'm31', 'm21', 'gta4xl', 'gta4xlwifi']
@@ -86,10 +87,12 @@ def main():
     ClangCompiler.verify_executable()
     
     build_type = "OneUI" if args.oneui else "AOSP"
+    selinux_state = "Permissive" if args.permissive else "Enforcing"
     display_info({
         'Kernel Name': 'Something New',
         'Kernel Version': kernel_version,
         'Build Type': build_type,
+        'SELinux': selinux_state,
         'Device': args.target,
         'TARGET_USES_LLVM': True,
         'TOOLCHAIN_VERSION': ClangCompiler.get_version(),
@@ -109,7 +112,9 @@ def main():
     
     if args.oneui:
         make_defconfig += ['oneui.config']
-    
+    if args.permissive:
+        make_defconfig += ['permissive.config']
+
     start_time = datetime.now()
     print('Running make defconfig...')
     run_command(make_defconfig)
