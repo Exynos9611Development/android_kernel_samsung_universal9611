@@ -60,6 +60,7 @@ def main():
     parser = argparse.ArgumentParser(description="Build Kernel with specified arguments")
     parser.add_argument('--target', type=str, required=True, help="Target device (a51/m21/...)")
     parser.add_argument('--allow-dirty', action='store_true', help="Allow dirty build")
+    parser.add_argument('--oneui', action='store_true', help="OneUI build")
     args = parser.parse_args()
     
     valid_targets = ['a51', 'f41', 'm31s', 'm31', 'm21', 'gta4xl', 'gta4xlwifi']
@@ -75,7 +76,6 @@ def main():
     ]
  
     kernel_version = "1.2.0"
-    kernel_additional_name = "Horror"
 
     if not file_exists("AnyKernel3/anykernel.sh"):
         run_command(['git', 'submodule', 'update', '--init'])
@@ -85,10 +85,11 @@ def main():
     
     ClangCompiler.verify_executable()
     
+    build_type = "OneUI" if args.oneui else "AOSP"
     display_info({
         'Kernel Name': 'Something New',
         'Kernel Version': kernel_version,
-        'Kernel Additional Name': kernel_additional_name,
+        'Build Type': build_type,
         'Device': args.target,
         'TARGET_USES_LLVM': True,
         'TOOLCHAIN_VERSION': ClangCompiler.get_version(),
@@ -106,6 +107,9 @@ def main():
     make_common = ['make', 'O=out', 'LLVM=1', f'-j{os.cpu_count()}'] + common_flags
     make_defconfig = make_common + [f'exynos9611-{args.target}_defconfig']
     
+    if args.oneui:
+        make_defconfig += ['oneui.config']
+    
     start_time = datetime.now()
     print('Running make defconfig...')
     run_command(make_defconfig)
@@ -118,8 +122,8 @@ def main():
         kernel_version_info = extract_match(r'"([^"]+)"', f.read())
     
     shutil.copyfile('out/arch/arm64/boot/Image', 'AnyKernel3/Image')
-    zip_filename = 'SN_{}_{}_{}.zip'.format(
-        kernel_version, args.target, datetime.today().strftime('%Y-%m-%d'))
+    zip_filename = 'SN_{}_{}_{}_{}.zip'.format(
+        kernel_version, args.target, 'OneUI' if args.oneui else 'AOSP', datetime.today().strftime('%Y-%m-%d'))
     os.chdir('AnyKernel3/')
     create_zip(zip_filename, [
         'Image', 
