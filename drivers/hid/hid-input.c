@@ -176,6 +176,10 @@ static int hidinput_setkeycode(struct input_dev *dev,
 				usage->code : KEY_RESERVED;
 		usage->code = ke->keycode;
 
+		if (usage->code > KEY_MAX || *old_keycode > KEY_MAX)
+			return -EINVAL;
+
+
 		clear_bit(*old_keycode, dev->keybit);
 		set_bit(usage->code, dev->keybit);
 		dbg_hid("Assigned keycode %d to HID usage code %x\n",
