@@ -910,8 +910,8 @@ static void hip4_watchdog(unsigned long data)
 	unsigned long           flags;
 #ifdef CONFIG_SCSC_WLAN_RX_NAPI
 	bool retrigger_watchdog = true;
-#endif
 	u8 i;
+#endif
 
 	if (!hip || !sdev || !sdev->service || !hip->hip_priv)
 		return;
@@ -2814,7 +2814,9 @@ void hip4_suspend(struct slsi_hip4 *hip)
 {
 	struct slsi_dev *sdev;
 	struct scsc_service *service;
+#ifdef CONFIG_SCSC_WLAN_RX_NAPI
 	u8 i;
+#endif
 
 	if (!hip || !hip->hip_priv)
 		return;
@@ -2846,7 +2848,9 @@ void hip4_resume(struct slsi_hip4 *hip)
 {
 	struct slsi_dev *sdev;
 	struct scsc_service *service;
+#ifdef CONFIG_SCSC_WLAN_RX_NAPI
 	u8 i;
+#endif
 
 	if (!hip || !hip->hip_priv)
 		return;
@@ -2876,7 +2880,9 @@ void hip4_freeze(struct slsi_hip4 *hip)
 {
 	struct slsi_dev *sdev;
 	struct scsc_service *service;
+#ifdef CONFIG_SCSC_WLAN_RX_NAPI
 	u8 i;
+#endif
 
 	if (!hip || !hip->hip_priv)
 		return;
