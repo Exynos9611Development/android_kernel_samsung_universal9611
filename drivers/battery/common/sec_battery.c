@@ -480,7 +480,7 @@ static bool sec_bat_change_vbus(struct sec_battery_info *battery)
 		return false;
 
 #if defined(CONFIG_SUPPORT_HV_CTRL)
-	if (battery->store_mode)
+	if (battery->store_mode || !battery->charging_enabled)
 		return false;
 
 	if (is_hv_wire_type(battery->cable_type) &&
@@ -552,7 +552,7 @@ static bool sec_bat_change_vbus_pd(struct sec_battery_info *battery)
 	if (battery->pdata->chg_temp_check_type == SEC_BATTERY_TEMP_CHECK_NONE)
 		return false;
 
-	if (battery->store_mode)
+	if (battery->store_mode || !battery->charging_enabled)
 		return false;
 
 	if (battery->cable_type == SEC_BATTERY_CABLE_PDIC) {
@@ -723,7 +723,7 @@ int sec_bat_set_charging_current(struct sec_battery_info *battery)
 #endif
 		/* Set limited max power when store mode is set and LDU
 			Limited max power should be set with over 5% capacity since target could be turned off during boot up */
-		if (battery->store_mode && (battery->capacity >= 5)) {
+		if ((battery->store_mode || !battery->charging_enabled) && (battery->capacity >= 5)) {
 			if (get_sec_vote_result(battery->input_vote) > (battery->pdata->store_mode_max_input_power / battery->input_voltage))
 				sec_vote(battery->input_vote, VOTER_STORE_MODE, true,
 					(battery->pdata->store_mode_max_input_power / battery->input_voltage));
@@ -1015,7 +1015,7 @@ void sec_bat_set_charging_status(struct sec_battery_info *battery,
 	case POWER_SUPPLY_STATUS_DISCHARGING:
 		if ((battery->status == POWER_SUPPLY_STATUS_FULL ||
 		     (battery->capacity == 100 && !is_slate_mode(battery))) &&
-		    !battery->store_mode) {
+		    !battery->store_mode && battery->charging_enabled) {
 
 			pr_info("%s : Update fg scale to 101%%\n", __func__);
 			value.intval = 100;
@@ -3489,7 +3489,7 @@ skip_current_monitor:
 	psy_do_property(battery->pdata->charger_name, get,
 		POWER_SUPPLY_EXT_PROP_MONITOR_WORK, val);
 
-	pr_info("%s: Status(%s), mode(%s), Health(%s), Cable(%s, %s, %d, %d), rp(%d), level(%d%%), lcd(%d), slate_mode(%d), store_mode(%d)"
+	pr_info("%s: Status(%s), mode(%s), Health(%s), Cable(%s, %s, %d, %d), rp(%d), level(%d%%), lcd(%d), slate_mode(%d), store_mode(%d), charging_enabled(%d)"
 #if defined(CONFIG_AFC_CHARGER_MODE)
 		", HV(%s, %d), sleep_mode(%d)"
 #endif
@@ -3512,7 +3512,8 @@ skip_current_monitor:
 		 battery->siop_level,
 		 battery->lcd_status,
 		 is_slate_mode(battery),
-		 battery->store_mode
+		 battery->store_mode,
+		 battery->charging_enabled
 #if defined(CONFIG_AFC_CHARGER_MODE)
 		, battery->hv_chg_name, battery->vbus_chg_by_siop, sleep_mode
 #endif
@@ -3535,6 +3536,34 @@ skip_current_monitor:
 	pr_info("%s: battery->stability_test(%d), battery->eng_not_full_status(%d)\n",
 			__func__, battery->stability_test, battery->eng_not_full_status);
 #endif
+
+	if (!is_nocharge_type(battery->cable_type) && !battery->charging_enabled) {
+		int chg_mode;
+		pr_info("%s: @battery->capacity = (%d), battery->status= (%d), battery->charging_enabled=(%d)\n",
+			 __func__, battery->capacity, battery->status, battery->charging_enabled);
+		chg_mode = battery->misc_event &
+			(BATT_MISC_EVENT_UNDEFINED_RANGE_TYPE | BATT_MISC_EVENT_HICCUP_TYPE | BATT_MISC_EVENT_TEMP_HICCUP_TYPE) ?
+				SEC_BAT_CHG_MODE_BUCK_OFF : SEC_BAT_CHG_MODE_CHARGING_OFF;
+		sec_bat_set_charging_status(battery,
+					    POWER_SUPPLY_STATUS_DISCHARGING);
+		sec_bat_set_charge(battery, chg_mode);
+		/* Enable charging on capacity lower than 5%, in case something bad happened */
+		if ((battery->capacity <= 5) && (battery->status == POWER_SUPPLY_STATUS_DISCHARGING)) {
+			sec_bat_set_charging_status(battery,
+						    POWER_SUPPLY_STATUS_CHARGING);
+			sec_bat_set_charge(battery, SEC_BAT_CHG_MODE_CHARGING);
+		}
+	}
+
+	if (!is_nocharge_type(battery->cable_type) && battery->charging_suspended && battery->charging_enabled && !battery->store_mode) {
+		pr_info("%s: @battery->capacity = (%d), battery->status= (%d), battery->charging_enabled=(%d)\n",
+			 __func__, battery->capacity, battery->status, battery->charging_enabled);
+		sec_bat_set_charging_status(battery,
+					    POWER_SUPPLY_STATUS_CHARGING);
+		sec_bat_set_charge(battery, SEC_BAT_CHG_MODE_CHARGING);
+		battery->charging_suspended = false;
+	}
+
 #if defined(CONFIG_SEC_FACTORY)
 	if (!is_nocharge_type(battery->cable_type)) {
 #else
@@ -5692,8 +5721,8 @@ static void sec_bat_set_rp_current(struct sec_battery_info *battery, int cable_t
 			sec_bat_change_default_current(battery, cable_type,
 				battery->pdata->default_input_current, battery->pdata->default_charging_current);
 		else {
-			if(battery->store_mode)
-				sec_bat_change_default_current(battery, cable_type,
+			if(battery->store_mode || !battery->charging_enabled)
+					sec_bat_change_default_current(battery, cable_type,
 					battery->pdata->rp_current_rdu_rp3, battery->pdata->max_charging_current);
 			else
 				sec_bat_change_default_current(battery, cable_type,
@@ -6774,6 +6803,7 @@ static int sec_battery_probe(struct platform_device *pdev)
 	battery->test_mode = 0;
 	battery->factory_mode = false;
 	battery->store_mode = false;
+	battery->charging_enabled = true;
 	battery->prev_usb_conf = USB_CURRENT_NONE;
 	battery->is_hc_usb = false;
 	battery->is_sysovlo = false;
