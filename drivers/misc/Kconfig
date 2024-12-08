@@ -547,6 +547,13 @@ config BATTERY_SAVER
 
 	  If in doubt, say Y.
 
+config USB_FAST_CHARGE
+	bool "Force faster charge rate for USB"
+	default n
+	help
+	  This option allows you to force a faster charge rate for USB.
+	  If unsure, say N.
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"

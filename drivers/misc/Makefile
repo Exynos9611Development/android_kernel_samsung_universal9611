@@ -66,6 +66,8 @@ obj-$(CONFIG_BATTERY_SAVER) += battery_saver.o
 obj-$(CONFIG_GNSS_SHMEM_IF)     += gnss_if/
 obj-$(CONFIG_MEMORY_STATE_TIME)	+= memory_state_time.o
 
+obj-$(CONFIG_USB_FAST_CHARGE) += fastchg.o
+
 # TEEGRIS kernel driver
 ccflags-$(CONFIG_TZDEV) += -I$(srctree)/drivers/misc/tzdev/include
 obj-$(CONFIG_TZDEV)		+= tzdev/

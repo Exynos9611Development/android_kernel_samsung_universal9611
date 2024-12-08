@@ -24,8 +24,14 @@
 #include <linux/usb_notify.h>
 #endif
 
+#ifdef CONFIG_USB_FAST_CHARGE
+#include <linux/fastchg.h>
+#endif
+
 #define HEALTH_DEBOUNCE_CNT     	1
 #define ENABLE_SM5713_ENBYPASS_MODE	1
+
+#define USB_FAST_CHARGE_SPEED 4650000 // 4650mA
 
 static struct device_attribute sm5713_charger_attrs[] = {
 	SM5713_CHARGER_ATTR(chip_id),
@@ -674,6 +680,11 @@ static int sm5713_chg_set_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
 		dev_info(charger->dev, "input limit changed [%dmA] -> [%dmA]\n",
 			charger->input_current, val->intval);
+#ifdef CONFIG_USB_FAST_CHARGE
+			if (force_fast_charge > 0 && charger->input_current < USB_FAST_CHARGE_SPEED) {
+				charger->input_current = USB_FAST_CHARGE_SPEED;
+			}
+#endif
 		charger->input_current = val->intval;
 		chg_set_input_current_limit(charger, charger->input_current);
 		break;
@@ -682,7 +693,14 @@ static int sm5713_chg_set_property(struct power_supply *psy,
 		dev_info(charger->dev, "charging current changed [%dmA] -> [%dmA]\n",
 			charger->charging_current, val->intval);
 		charger->charging_current = val->intval;
+#ifdef CONFIG_USB_FAST_CHARGE
+		if (force_fast_charge > 0 && charger->charging_current < USB_FAST_CHARGE_SPEED) {
+			charger->charging_current = USB_FAST_CHARGE_SPEED;
+		}
+#endif
 		chg_set_charging_current(charger, charger->charging_current);
+		chg_set_charging_current(charger, charger->charging_current);
+		break;
 		break;
 	case POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT:
 		break;

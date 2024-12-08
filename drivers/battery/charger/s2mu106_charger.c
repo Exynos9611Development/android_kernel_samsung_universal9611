@@ -36,6 +36,10 @@
 #include <linux/usb_notify.h>
 #endif
 
+#ifdef CONFIG_USB_FAST_CHARGE
+#include <linux/fastchg.h>
+#endif
+
 #define ENABLE 1
 #define DISABLE 0
 
@@ -49,6 +53,8 @@
 #define IVR_WORK_DELAY 50
 
 extern int factory_mode;
+
+#define USB_FAST_CHARGE_SPEED 6500000 // 6500mA
 
 static char *s2mu106_supplied_to[] = {
 	"battery",
@@ -1283,6 +1289,11 @@ static int s2mu106_chg_set_property(struct power_supply *psy,
 				s2mu106_set_input_current_limit(charger, input_current);
 			if (is_nocharge_type(charger->cable_type))
 				s2mu106_set_wireless_input_current(charger, input_current);
+#ifdef CONFIG_USB_FAST_CHARGE
+			if (force_fast_charge > 0 && charger->charging_current < USB_FAST_CHARGE_SPEED) {
+				charger->charging_current = USB_FAST_CHARGE_SPEED;
+			}
+#endif
 			charger->input_current = input_current;
 		}
 		break;
@@ -1293,6 +1304,11 @@ static int s2mu106_chg_set_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
 		pr_info("[DEBUG] %s: is_charging %d\n", __func__, charger->is_charging);
 		charger->charging_current = val->intval;
+#ifdef CONFIG_USB_FAST_CHARGE
+		if (force_fast_charge > 0 && charger->charging_current < USB_FAST_CHARGE_SPEED) {
+			charger->charging_current = USB_FAST_CHARGE_SPEED;
+		}
+#endif
 		/* set charging current */
 		if (is_not_wireless_type(charger->cable_type))
 			s2mu106_set_fast_charging_current(charger, charger->charging_current);
