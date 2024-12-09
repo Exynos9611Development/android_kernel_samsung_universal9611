@@ -74,8 +74,8 @@ def main():
         'ARCH=arm64', f'-j{os.cpu_count()}'
     ]
  
-    kernel_version = "1.0.0"
-    kernel_additional_name = "Killer"
+    kernel_version = "1.1.0"
+    kernel_additional_name = "Dust"
 
     if not file_exists("AnyKernel3/anykernel.sh"):
         run_command(['git', 'submodule', 'update', '--init'])
