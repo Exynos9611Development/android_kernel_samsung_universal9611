@@ -1,0 +1,277 @@
+/*
+ * Vogue battery device tree common
+ *
+ * Copyright (c) 2018 Samsung Electronics Co., Ltd.
+ *		http://www.samsung.com
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+/ {
+	fragment@battery {
+		target-path = "/";
+		__overlay__ {
+			sm5713-fuelgauge {
+				status = "disabled";
+			};
+
+			battery {
+				battery,charger_name = "s2mu106-charger";
+				battery,fuelgauge_name = "s2mu106-fuelgauge";
+				battery,fgsrc_switch_name = "s2mu106-fuelgauge"; /* Fuelgauge voltage source */
+
+				battery,chg_thermal_source = <1>; /* SEC_BATTERY_THERMAL_SOURCE_FG */
+				battery,chg_heating_prevention_method = <1>; /* SEC_BATTERY_BY_CHANGING_CURRENT */
+
+				battery,ttf_hv_charge_current = <2125>;
+			};
+
+			battery_params {
+				battery,battery_data =
+					<
+					/***** battery data for 4.35 *****/
+					/* battery,battery_table3 */
+					94	11	222	10	94	10	222	9	105	9
+					249	8	144	8	43	8	214	7	134	7
+					14	7	204	6	156	6	117	6	86	6
+					59	6	18	6	235	5	178	5	132	5
+					17	5	168	1	222	8	111	8	0	8
+					145	7	34	7	179	6	68	6	213	5
+					103	5	248	4	137	4	26	4	171	3
+					60	3	205	2	94	2	239	1	128	1
+					18	1	163	0	52	0	214	15
+
+					/* battery,battery_table4 */
+					10	10	10	10	45	45	45	45	45	45
+					45	45	45	46	46	47	48	48	50	53
+					57	154
+
+					/* battery,batcap */
+					0x34 0x56 0x29 0x10 /* [0x0E] [0x0F] [0x10] [0x11] */
+					/* battery,accum */
+					0x00 0x08 /* [0x44] [0x45] */
+
+					/* battery,soc_arr_val */
+					11083	10542	10000	9458	8917	8375	7834	7292	6751	6209
+					5668	5126	4585	4043	3502	2960	2419	1877	1336	794
+					253	(-205)
+
+					/* battery,ocv_arr_val */
+					44207	43583	42959	42335	41763	41216	40704	40210	39794	39404
+					38820	38496	38260	38072	37920	37787	37588	37397	37119	36893
+					36331	32073
+
+					/* battery,tuning */
+					0x00
+
+					/***** battery data for 4.33 *****/
+					/* battery,battery_table3 */
+					94	11	222	10	94	10	222	9	105	9
+					249	8	144	8	43	8	214	7	134	7
+					14	7	204	6	156	6	117	6	86	6
+					59	6	18	6	235	5	178	5	132	5
+					17	5	168	1	245	8	133	8	21	8
+					165	7	53	7	197	6	85	6	229	5
+					117	5	5	5	149	4	37	4	181	3
+					69	3	213	2	101	2	244	1	132	1
+					20	1	164	0	52	0	214	15
+
+					/* battery,battery_table4 */
+					10	10	10	10	45	45	45	45	45	45
+					45	45	45	46	46	47	48	48	50	53
+					57	154
+
+					/* battery,batcap */
+					0x40 0x53 0x9C 0x0F /* [0x0E] [0x0F] [0x10] [0x11] */
+					/* battery,accum */
+					0x00 0x08 /* [0x44] [0x45] */
+
+					/* battery,soc_arr_val */
+					11197	10650	10103	9556	9009	8462	7915	7368	6821	6273
+					5726	5179	4632	4085	3538	2991	2444	1897	1350	802
+					255	(-207)
+
+					/* battery,ocv_arr_val */
+					44207	43583	42959	42335	41763	41216	40704	40210	39794	39404
+					38820	38496	38260	38072	37920	37787	37588	37397	37119	36893
+					36331	32073
+
+					/* battery,tuning */
+					0x00
+
+					/***** battery data for 4.31 *****/
+					/* battery,battery_table3 */
+					94	11	222	10	94	10	222	9	105	9
+					249	8	144	8	43	8	214	7	134	7
+					14	7	204	6	156	6	117	6	86	6
+					59	6	18	6	235	5	178	5	132	5
+					17	5	168	1	31	9	173	8	59	8
+					201	7	86	7	228	6	114	6	0	6
+					142	5	28	5	170	4	56	4	198	3
+					84	3	226	2	112	2	254	1	139	1
+					25	1	167	0	53	0	213	15
+
+					/* battery,battery_table4 */
+					10	10	10	10	45	45	45	45	45	45
+					45	45	45	46	46	47	48	48	50	53
+					57	154
+
+					/* battery,batcap */
+					0xC4 0x51 0x54 0x0F /* [0x0E] [0x0F] [0x10] [0x11] */
+					/* battery,accum */
+					0x00 0x08 /* [0x44] [0x45] */
+
+					/* battery,soc_arr_val */
+					11400	10843	10286	9729	9172	8615	8058	7501	6944	6387
+					5830	5273	4716	4159	3602	3045	2488	1931	1374	817
+					260	(-210)
+
+					/* battery,ocv_arr_val */
+					44207	43583	42959	42335	41763	41216	40704	40210	39794	39404
+					38820	38496	38260	38072	37920	37787	37588	37397	37119	36893
+					36331	32073
+
+					/* battery,tuning */
+					0x00
+
+					/***** battery data for 4.29 *****/
+					/* battery,battery_table3 */
+					94	11	222	10	94	10	222	9	105	9
+					249	8	144	8	43	8	214	7	134	7
+					14	7	204	6	156	6	117	6	86	6
+					59	6	18	6	235	5	178	5	132	5
+					17	5	168	1	76	9	216	8	100	8
+					239	7	123	7	7	7	146	6	30	6
+					170	5	54	5	193	4	77	4	217	3
+					100	3	240	2	124	2	7	2	147	1
+					31	1	171	0	54	0	212	15
+
+					/* battery,battery_table4 */
+					10	10	10	10	45	45	45	45	45	45
+					45	45	45	46	46	47	48	48	50	53
+					57	154
+
+					/* battery,batcap */
+					0x34 0x50 0x9 0x0F /* [0x0E] [0x0F] [0x10] [0x11] */
+					/* battery,accum */
+					0x00 0x08 /* [0x44] [0x45] */
+
+					/* battery,soc_arr_val */
+					11622	11054	10486	9919	9351	8783	8215	7647	7079	6511
+					5944	5376	4808	4240	3672	3104	2536	1969	1401	833
+					265	(-215)
+
+					/* battery,ocv_arr_val */
+					44207	43583	42959	42335	41763	41216	40704	40210	39794	39404
+					38820	38496	38260	38072	37920	37787	37588	37397	37119	36893
+					36331	32073
+
+					/* battery,tuning */
+					0x00
+
+					/***** battery data for 4.24 *****/
+					/* battery,battery_table3 */
+					94	11	222	10	94	10	222	9	105	9
+					249	8	144	8	43	8	214	7	134	7
+					14	7	204	6	156	6	117	6	86	6
+					59	6	18	6	235	5	178	5	132	5
+					17	5	168	1	173	9	52	9	187	8
+					66	8	201	7	80	7	215	6	94	6
+					229	5	108	5	243	4	122	4	1	4
+					136	3	15	3	150	2	28	2	163	1
+					42	1	177	0	56	0	210	15
+
+					/* battery,battery_table4 */
+					10	10	10	10	45	45	45	45	45	45
+					45	45	45	46	46	47	48	48	50	53
+					57	154
+
+					/* battery,batcap */
+					0x14 0x4D 0x73 0x0E /* [0x0E] [0x0F] [0x10] [0x11] */
+					/* battery,accum */
+					0x00 0x08 /* [0x44] [0x45] */
+
+					/* battery,soc_arr_val */
+					12093	11502	10911	10320	9729	9139	8548	7957	7366	6775
+					6184	5593	5003	4412	3821	3230	2639	2048	1457	867
+					276	(-223)
+
+					/* battery,ocv_arr_val */
+					44207	43583	42959	42335	41763	41216	40704	40210	39794	39404
+					38820	38496	38260	38072	37920	37787	37588	37397	37119	36893
+					36331	32073
+
+					/* battery,tuning */
+					0x00
+					>;
+			};
+
+			s2mu106-charger {
+				status = "disable";
+				compatible = "samsung,s2mu106-charger";
+			};
+		};
+	};
+};
+
+&pinctrl_1 {
+	fuel_irq: fuel-irq {
+		samsung,pins = "gpm20-0";
+		samsung,pin-function = <0>;
+		samsung,pin-pud = <3>;
+		samsung,pin-drv = <0>;
+		samsung,pin-pud-pdn = <3>;
+	};
+};
+
+&i2c_0 {
+	s2mu106-fuelgauge@3B {
+		compatible = "samsung,s2mu106-fuelgauge";
+		status = "okay";
+		reg = <0x3B>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&fuel_irq>;
+		fuelgauge,fuel_int = <&gpm20 0 0>;
+		fuelgauge,fuel_alert_soc = <1>;
+		fuelgauge,fuel_alert_vol = <3300>;
+		fuelgauge,low_temp_limit = <100>;
+		fuelgauge,low_voltage_limit_lowtemp = <3000>;
+		fuelgauge,i_socr_coeff = <80>;
+		fuelgauge,low_t_compen_coeff = <180>;
+		fuelgauge,sw_vbat_l_recovery_vol = <3465>;
+		fuelgauge,capacity_max = <990>;
+		fuelgauge,capacity_max_margin = <200>;
+		fuelgauge,capacity_min = <0>;
+		fuelgauge,capacity_calculation_type = <28>;
+		fuelgauge,capacity_full = <6000>;
+		fuelgauge,type_str = "SDI";
+		fuelgauge,fg_log_enable = <1>;
+		fuelgauge,ttf_capacity = <4775>;
+		fuelgauge,cv_data = <
+			2370	870	2091
+			2138	880	1991
+			1974	889	1886
+			1886	898	1781
+			1750	905	1687
+			1640	912	1594
+			1520	920	1488
+			1432	926	1396
+			1322	932	1293
+			1246	938	1189
+			1133	943	1082
+			1080	948	978
+			993	953	873
+			943	956	799
+			912	961	694
+			840	966	592
+			792	971	495
+			746	976	390
+			696	979	296
+			648	983	192
+			604	987	98
+			547	995	0
+			>;
+	};
+};

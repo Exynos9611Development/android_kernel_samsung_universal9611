@@ -1,0 +1,58 @@
+/*
+ * SAMSUNG EXYNOS850 board device tree source
+ *
+ * Copyright (c) 2019 Samsung Electronics Co., Ltd.
+ *		http://www.samsung.com
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+&i2c_5 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+	samsung,i2c-sda-delay = <100>;
+	samsung,i2c-max-bus-freq = <400000>;
+
+	isg5320a@28 {
+		compatible = "isg5320a";
+		pinctrl-names = "default";
+		pinctrl-0 = <&grip_int>;
+		reg = <0x28>;
+		status = "okay";
+		interrupt-parent = <&gpa0>;
+		interrupts = <4 0 0>;
+		isg5320a,irq-gpio = <&gpa0 4 0x00>;
+		isg5320a,hallic_detect = <0>;
+		isg5320a,hallic_cert_detect = <0>;
+	};
+
+	isg5320a_sub@2C {
+		compatible = "isg5320a_sub";
+		pinctrl-names = "default";
+		pinctrl-0 = <&grip_sub_int>;
+		reg = <0x2C>;
+		status = "okay";
+		interrupt-parent = <&gpa2>;
+		interrupts = <7 0 0>;
+		isg5320a_sub,irq-gpio = <&gpa2 7 0x00>;
+		isg5320a_sub,hallic_detect = <0>;
+		isg5320a_sub,hallic_cert_detect = <0>;
+	};
+};
+
+&pinctrl_0 {
+	grip_int: grip-int {
+		samsung,pins = "gpa0-4";
+		samsung,pin-function = <0xf>;
+		samsung,pin-pud = <0>;
+	};
+
+	grip_sub_int: grip-sub-int {
+		samsung,pins = "gpa2-7";
+		samsung,pin-function = <0xf>;
+		samsung,pin-pud = <0>;
+	};
+};

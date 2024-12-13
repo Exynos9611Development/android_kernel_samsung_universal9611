@@ -1,0 +1,73 @@
+/*
+ * SAMSUNG EXYNOS9611 board common device tree source
+ *
+ * Copyright (c) 2020 Samsung Electronics Co., Ltd.
+ *		http://www.samsung.com
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+&pinctrl_0 {
+	if_pmic_irq: if-pmic-irq {
+		samsung,pins = "gpa2-2";
+		samsung,pin-function = <0>;
+		samsung,pin-pud = <0>;
+		samsung,pin-drv = <0>;
+	};
+
+	usbpd_irq: usbpd-irq {
+		samsung,pins = "gpa2-3";
+		samsung,pin-function = <0x0f>;
+		samsung,pin-pud = <0>;
+		samsung,pin-drv = <0>;
+	};
+};
+
+&i2c_0 {
+	i2c-gpio,delay-us = <1>;
+	#address-cells = <0>;
+	status = "okay";
+	samsung,glitch-filter;
+	samsung,fix-doxfer-return;
+	#size-cells = <0>;
+	samsung,i2c-max-bus-freq = <400000>;
+	usbpd-s2mu106@3C {
+		status = "okay";
+		compatible = "s2mu106-usbpd";
+		reg = <0x3C>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&usbpd_irq>;
+		usbpd,usbpd_int = <&gpa2 3 0>;
+	};
+};
+
+&i2c_1 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+	samsung,glitch-filter;
+	samsung,fix-doxfer-return;
+	samsung,i2c-max-bus-freq = <400000>;
+	s2mu106@3D {
+		status = "okay";
+		compatible = "samsung,s2mu106mfd";
+		reg = <0x3D>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&if_pmic_irq>;
+		s2mu106,irq-gpio = <&gpa2 2 1>;
+		s2mu106,wakeup;
+	};
+	s2mu106@3A {
+		s2mu106-haptic {
+			compatible = "sec,s2mu106-haptic";
+			status = "okay";
+			pinctrl-names = "default";
+			pinctrl-0 = <&motor_en>;
+			haptic,operation_mode = <1>; /* 0 : ERM_I2C, 1 : ERM_GPIO, 2 : LRA */
+			haptic,motor_en = <&gpa2 1 0>;
+			haptic,motor_type = "COINDC";
+		};
+	};
+};

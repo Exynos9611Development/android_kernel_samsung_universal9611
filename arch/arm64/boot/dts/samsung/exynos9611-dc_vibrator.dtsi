@@ -1,0 +1,27 @@
+/*
+ * SAMSUNG EXYNOS9611 board common device tree source
+ *
+ * Copyright (c) 2018 Samsung Electronics Co., Ltd.
+ *		http://www.samsung.com
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+/ {
+	fragment@motor {
+		target-path = "/";
+		__overlay__ {
+			/* VIBRATOR */
+			dc_vibrator {
+				compatible = "samsung,dc_vibrator";
+				status = "okay";
+				pinctrl-names = "default";
+				pinctrl-0 = <&motor_en>;
+				dc_vib,gpio_en = <&gpa2 1 0>;
+				dc_vib,motor_type = "COINDC";
+			};
+		};
+	};
+};

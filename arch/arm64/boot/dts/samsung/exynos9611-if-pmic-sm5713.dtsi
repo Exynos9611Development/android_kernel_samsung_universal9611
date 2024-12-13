@@ -1,0 +1,62 @@
+/*
+ * SAMSUNG EXYNOS9611 board common device tree source
+ *
+ * Copyright (c) 2020 Samsung Electronics Co., Ltd.
+ *		http://www.samsung.com
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+&pinctrl_0 {
+	if_pmic_irq: if-pmic-irq {
+		samsung,pins = "gpa2-2";
+		samsung,pin-function = <0>;
+		samsung,pin-pud = <0>;
+		samsung,pin-drv = <0>;
+	};
+
+	usbpd_irq: usbpd-irq {
+		samsung,pins = "gpa2-3";
+		samsung,pin-function = <0x0f>;
+		samsung,pin-pud = <0>;
+		samsung,pin-drv = <0>;
+	};
+};
+
+&i2c_0 {
+	i2c-gpio,delay-us = <5>;
+	status = "okay";
+	samsung,glitch-filter;
+	samsung,fix-doxfer-return;
+	#address-cells = <1>;
+	#size-cells = <0>;
+	samsung,i2c-max-bus-freq = <400000>;
+	usbpd-5713@33 {
+		compatible = "sm5713-usbpd,i2c";
+		reg = <0x33>;
+		pinctrl-names = "default";
+		/* vconn-en; */
+		support_pd_role_swap;
+		pinctrl-0 = <&usbpd_irq>;
+		usbpd,usbpd_int = <&gpa2 3 0>;
+	};
+};
+
+&i2c_1 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+	samsung,glitch-filter;
+	samsung,fix-doxfer-return;
+	samsung,i2c-max-bus-freq = <400000>;
+	sm5713@49{
+		compatible = "siliconmitus,sm5713mfd";
+		reg = <0x49>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&chg_en &if_pmic_irq>;
+		sm5713,irq-gpio = <&gpa2 2 0>;
+		sm5713,wakeup;
+	};
+};
