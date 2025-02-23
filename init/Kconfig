@@ -2095,3 +2095,5 @@ config ASN1
 source "kernel/Kconfig.locks"
 
 source "kernel/ftt/Kconfig"
+
+source "init/sar_ramdisk/Kconfig"

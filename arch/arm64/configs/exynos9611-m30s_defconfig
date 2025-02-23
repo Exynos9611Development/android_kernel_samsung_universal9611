@@ -587,7 +587,7 @@ CONFIG_CMDLINE=""
 # CONFIG_BUILD_ARM64_APPENDED_DTB_IMAGE is not set
 # CONFIG_UH is not set
 # CONFIG_UH_LKM_BLOCK is not set
-
+CONFIG_ANDROID_SAR_RAMDISK=y
 #
 # Userspace binary formats
 #
