@@ -27,6 +27,8 @@ extern unsigned int calculate_energy(struct task_struct *p, int target_cpu);
 extern int band_play_cpu(struct task_struct *p);
 extern int ontime_can_migration(struct task_struct *p, int dst_cpu);
 
+extern bool is_cpu_preemptible(struct task_struct *p, int prev_cpu, int cpu, int sync);
+
 #ifdef CONFIG_SCHED_TUNE
 extern int prefer_perf_cpu(struct task_struct *p);
 extern int prefer_idle_cpu(struct task_struct *p);
