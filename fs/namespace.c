@@ -1533,18 +1533,13 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
 		}
 		goto bypass_orig_flow;
 	}
-	// Secondly, check if it is zygote process and no matter it is doing unshare or not
-	if (likely(is_current_zygote_domain) && (old->mnt_id >= DEFAULT_SUS_MNT_ID)) {
+	// Lastly, just check if old->mnt_id is sus
+	if (old->mnt_id >= DEFAULT_SUS_MNT_ID) {
 		/* Important Note: 
-		 *  - Here we can't determine whether the unshare is called zygisk or not,
-		 *    so we can only patch out the unshare code in zygisk source code for now
-		 *  - But at least we can deal with old sus mounts using alloc_vfsmnt()
+		 *  - Here we can't determine whether the unshare is called by zygisk or not,
+		 *    so we can only patch out the unshare code in zygisk source code for now,
+		 *    but at least we can deal with old sus mounts using alloc_vfsmnt()
 		 */
-		mnt = alloc_vfsmnt(old->mnt_devname, true, 0);
-		goto bypass_orig_flow;
-	}
-	// Lastly, for other process that is doing unshare operation, but only deal with old sus mount
-	if ((flag & CL_COPY_MNT_NS) && (old->mnt_id >= DEFAULT_SUS_MNT_ID)) {
 		mnt = alloc_vfsmnt(old->mnt_devname, true, 0);
 		goto bypass_orig_flow;
 	}
