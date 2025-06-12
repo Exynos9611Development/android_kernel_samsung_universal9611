@@ -133,17 +133,6 @@ static inline size_t size_vstruct(size_t nelem, size_t elem_size, size_t base)
 	return base + nelem * elem_size;
 }
 
-/* returns true if fence a comes after fence b */
-static inline bool fence_after(u32 a, u32 b)
-{
-	return (s32)(a - b) > 0;
-}
-
-static inline bool fence_after_eq(u32 a, u32 b)
-{
-	return (s32)(a - b) >= 0;
-}
-
 static inline unsigned long etnaviv_timeout_to_jiffies(
 	const struct timespec *timeout)
 {

@@ -1029,6 +1029,9 @@ static void ieee80211_do_stop(struct ieee80211_sub_if_data *sdata,
 		spin_unlock_bh(&fq->lock);
 	}
 
+	if (sdata->vif.txq)
+		ieee80211_txq_purge(sdata->local, to_txq_info(sdata->vif.txq));
+
 	if (local->open_count == 0)
 		ieee80211_clear_tx_pending(local);
 

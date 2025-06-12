@@ -421,7 +421,6 @@ struct batadv_hardif_neigh_node_bat_v {
 	u32 elp_interval;
 	u32 elp_latest_seqno;
 	unsigned long last_unicast_tx;
-	struct work_struct metric_work;
 };
 
 /**

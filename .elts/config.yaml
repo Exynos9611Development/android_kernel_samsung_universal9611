@@ -1,6 +1,6 @@
-upstream_repo: git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git
+upstream_repo: git://git.kernel.org/pub/scm/linux/kernel/git/cip/linux-cip.git
 upstream_base: 4.19.304
 base: 4.14.336
-upstream_version: 4.19.322
-version: 4.14.355
+upstream_version: 4.19.325-cip121
+version: 4.14.364
 rc: 1

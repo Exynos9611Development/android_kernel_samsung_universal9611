@@ -334,12 +334,6 @@ early_idt_handler_common:
 	jmp restore_regs_and_return_to_kernel
 END(early_idt_handler_common)
 
-	__INITDATA
-
-	.balign 4
-GLOBAL(early_recursion_flag)
-	.long 0
-
 #define NEXT_PAGE(name) \
 	.balign	PAGE_SIZE; \
 GLOBAL(name)
@@ -374,6 +368,8 @@ GLOBAL(name)
 	.endr
 
 	__INITDATA
+	.balign 4
+
 NEXT_PGD_PAGE(early_top_pgt)
 	.fill	511,8,0
 #ifdef CONFIG_X86_5LEVEL
@@ -385,6 +381,9 @@ NEXT_PGD_PAGE(early_top_pgt)
 
 NEXT_PAGE(early_dynamic_pgts)
 	.fill	512*EARLY_DYNAMIC_PAGE_TABLES,8,0
+
+GLOBAL(early_recursion_flag)
+	.long 0
 
 	.data
 

@@ -2,7 +2,7 @@
 #ifndef _ASM_M68K_VGA_H
 #define _ASM_M68K_VGA_H
 
-#include <asm/raw_io.h>
+#include <asm/io.h>
 
 /*
  * FIXME
@@ -21,8 +21,8 @@
 #define inw_p(port)		0
 #define outb_p(port, val)	do { } while (0)
 #define outw(port, val)		do { } while (0)
-#define readb			raw_inb
-#define writeb			raw_outb
-#define writew			raw_outw
+#define readb			__raw_readb
+#define writeb			__raw_writeb
+#define writew			__raw_writew
 
 #endif /* _ASM_M68K_VGA_H */

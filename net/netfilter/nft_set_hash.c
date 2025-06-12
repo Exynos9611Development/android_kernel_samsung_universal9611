@@ -27,10 +27,12 @@
 struct nft_rhash {
 	struct rhashtable		ht;
 	struct delayed_work		gc_work;
+	u32				wq_gc_seq;
 };
 
 struct nft_rhash_elem {
 	struct rhash_head		node;
+	u32				wq_gc_seq;
 	struct nft_set_ext		ext;
 };
 
@@ -284,6 +286,10 @@ static void nft_rhash_gc(struct work_struct *work)
 	priv = container_of(work, struct nft_rhash, gc_work.work);
 	set  = nft_set_container_of(priv);
 
+	/* Elements never collected use a zero gc worker sequence number. */
+	if (unlikely(++priv->wq_gc_seq == 0))
+		priv->wq_gc_seq++;
+
 	err = rhashtable_walk_init(&priv->ht, &hti, GFP_KERNEL);
 	if (err)
 		goto schedule;
@@ -299,6 +305,14 @@ static void nft_rhash_gc(struct work_struct *work)
 			continue;
 		}
 
+		/* rhashtable walk is unstable, already seen in this gc run?
+		 * Then, skip this element. In case of (unlikely) sequence
+		 * wraparound and stale element wq_gc_seq, next gc run will
+		 * just find this expired element.
+		 */
+		if (he->wq_gc_seq == priv->wq_gc_seq)
+			continue;
+
 		if (!nft_set_elem_expired(&he->ext))
 			continue;
 		if (nft_set_elem_mark_busy(&he->ext))
@@ -309,6 +323,8 @@ static void nft_rhash_gc(struct work_struct *work)
 			goto out;
 		rhashtable_remove_fast(&priv->ht, &he->node, nft_rhash_params);
 		atomic_dec(&set->nelems);
+		/* annotate gc sequence for this attempt. */
+		he->wq_gc_seq = priv->wq_gc_seq;
 		nft_set_gc_batch_add(gcb, he);
 	}
 out:

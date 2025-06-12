@@ -33,6 +33,7 @@ int pci_mmap_fits(struct pci_dev *pdev, int resno, struct vm_area_struct *vmai,
 		  enum pci_mmap_api mmap_api);
 
 int pci_probe_reset_function(struct pci_dev *dev);
+int pci_reset_bus(struct pci_bus *bus);
 
 /**
  * struct pci_platform_pm_ops - Firmware PM callbacks

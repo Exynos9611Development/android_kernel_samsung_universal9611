@@ -406,7 +406,7 @@ static struct mif_device *ip6mr_vif_seq_idx(struct net *net,
 }
 
 static void *ip6mr_vif_seq_start(struct seq_file *seq, loff_t *pos)
-	__acquires(mrt_lock)
+	__acquires(RCU)
 {
 	struct ipmr_vif_iter *iter = seq->private;
 	struct net *net = seq_file_net(seq);
@@ -418,7 +418,7 @@ static void *ip6mr_vif_seq_start(struct seq_file *seq, loff_t *pos)
 
 	iter->mrt = mrt;
 
-	read_lock(&mrt_lock);
+	rcu_read_lock();
 	return *pos ? ip6mr_vif_seq_idx(net, seq->private, *pos - 1)
 		: SEQ_START_TOKEN;
 }
@@ -442,9 +442,9 @@ static void *ip6mr_vif_seq_next(struct seq_file *seq, void *v, loff_t *pos)
 }
 
 static void ip6mr_vif_seq_stop(struct seq_file *seq, void *v)
-	__releases(mrt_lock)
+	__releases(RCU)
 {
-	read_unlock(&mrt_lock);
+	rcu_read_unlock();
 }
 
 static int ip6mr_vif_seq_show(struct seq_file *seq, void *v)
