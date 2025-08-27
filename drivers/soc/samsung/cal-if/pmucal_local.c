@@ -66,7 +66,9 @@ int pmucal_local_enable(unsigned int pd_id)
 
 err_out:
 	dump_stack();
+#ifdef CONFIG_DEBUG_SNAPSHOT
 	s3c2410wdt_set_emergency_reset(0, 0);
+#endif
 
 	return ret;
 }
@@ -132,7 +134,9 @@ int pmucal_local_disable(unsigned int pd_id)
 
 err_out:
 	dump_stack();
+#ifdef CONFIG_DEBUG_SNAPSHOT
 	s3c2410wdt_set_emergency_reset(0, 0);
+#endif
 
 	return ret;
 }
