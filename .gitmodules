@@ -1,0 +1,3 @@
+[submodule "AnyKernel3"]
+	path = AnyKernel3
+	url = https://github.com/Exynos9611Development/kernel_AnyKernel3
