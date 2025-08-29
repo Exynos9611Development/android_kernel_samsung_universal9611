@@ -1451,7 +1451,7 @@ found_best_cpu:
 	return target_cpu;
 }
 
-int __init core_init()
+int __init core_init(void)
 {
 	tex_init();
 
