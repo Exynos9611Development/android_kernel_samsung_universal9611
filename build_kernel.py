@@ -113,6 +113,16 @@ def main():
     run_command(make_defconfig)
     print('Building the kernel...')
     run_command(make_common)
+    print('Building dtbo image')
+    run_command(['python3', 'build_kernel/bin/mkdtboimg.py',
+                 'cfg_create', f'out/arch/arm64/boot/dtbo-{args.target}.img',
+                 f'build_kernel/configs/dtbo/{args.target}.cfg',
+                 '-d', 'out/arch/arm64/boot/dts/samsung'])
+    print('Building dtb image')
+    run_command(['python3', 'build_kernel/bin/mkdtboimg.py',
+                 'cfg_create', 'out/arch/arm64/boot/exynos9611.dtb',
+                 'build_kernel/configs/dtb/exynos9611.cfg',
+                 '--dtb-dir', 'out/arch/arm64/boot/dts/exynos'])
     print('Build complete')
     elapsed_time = datetime.now() - start_time
     
@@ -120,13 +130,17 @@ def main():
         kernel_version_info = extract_match(r'"([^"]+)"', f.read())
     
     shutil.copyfile('out/arch/arm64/boot/Image', 'AnyKernel3/Image')
+    shutil.copyfile(f'{output_dir}/arch/arm64/boot/dtbo-{args.target}.img', 'AnyKernel3/dtbo.img')
+    shutil.copyfile('out/arch/arm64/boot/exynos9611.dtb', 'AnyKernel3/dtb')
     ksu = 'KSU' if args.ksu else 'NON-KSU'
     zip_filename = 'SN_{}_{}_{}_{}.zip'.format(
         kernel_version, args.target, datetime.today().strftime('%Y-%m-%d'), ksu)
 
     os.chdir('AnyKernel3/')
     create_zip(zip_filename, [
-        'Image', 
+        'Image',
+        'dtbo.img',
+        'dtb',
         'META-INF/com/google/android/update-binary',
         'META-INF/com/google/android/updater-script',
         'tools/ak3-core.sh',
