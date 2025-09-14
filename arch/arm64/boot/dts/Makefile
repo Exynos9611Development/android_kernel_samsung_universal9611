@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0
 dtb-y += exynos/exynos9610.dtb
-dtb-y += exynos/exynos9611.dtb
+dtb-y += exynos/exynos9610-p.dtb
 dtbo-y += samsung/exynos9611-a51_eur_open_03.dtbo
 dtbo-y += samsung/exynos9611-a51_eur_open_00.dtbo
 dtbo-y += samsung/exynos9611-a51_eur_open_01.dtbo
