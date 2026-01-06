@@ -952,6 +952,7 @@ void __noreturn do_exit(long code)
 	if(tsk->se.ftt_mark)
 		fttstat.ftt_cnt--;
 #endif
+	exit_umh(tsk);
 
 	/*
 	 * Flush inherited counters to the parent - before the parent
