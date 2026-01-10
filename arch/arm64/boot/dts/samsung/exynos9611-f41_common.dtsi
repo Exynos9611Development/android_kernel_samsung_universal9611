@@ -15,7 +15,6 @@
 #include "display-lcd_m31_common.dtsi"
 #include "exynos9611-f41_camera.dtsi"
 #include "exynos9611-m31_sound.dtsi"
-#include "exynos9610-inputbooster.dtsi"
 #include "battery_data_m31_common.dtsi"
 
 / {

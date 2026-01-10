@@ -19,7 +19,6 @@
 #include "exynos9611-gta4xlwifi_camera.dtsi"
 #include "exynos9611-gta4xlwifi_sound.dtsi"
 #include "exynos9611-gta4xlwifi_mst_00.dtsi"
-#include "exynos9610-inputbooster.dtsi"
 
 / {
 

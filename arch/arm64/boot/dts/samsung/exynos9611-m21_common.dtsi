@@ -14,7 +14,6 @@
 #include "modem-s337ap-sipc-pdata.dtsi"
 #include "display-lcd_m21_common.dtsi"
 #include "exynos9611-m21_sound.dtsi"
-#include "exynos9610-inputbooster.dtsi"
 #include "battery_data_m21_common.dtsi"
 
 / {

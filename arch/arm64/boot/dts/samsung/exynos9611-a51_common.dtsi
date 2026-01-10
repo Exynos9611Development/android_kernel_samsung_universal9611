@@ -16,7 +16,6 @@
 #include "exynos9611-a51_camera.dtsi"
 #include "exynos9611-a50s_sound.dtsi"
 #include "exynos9610-a50_mst_03.dtsi"
-#include "exynos9610-inputbooster.dtsi"
 
 / {
 
