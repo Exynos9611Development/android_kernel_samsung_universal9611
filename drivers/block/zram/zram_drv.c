@@ -1766,20 +1766,24 @@ static ssize_t writeback_store(struct device *dev,
 		zram_set_element(zram, index, blk_idx << (PAGE_SHIFT * 2));
 		blk_idx = 0;
 		atomic64_inc(&zram->stats.pages_stored);
-		atomic64_inc(&zram->stats.bd_objcnt);
 #ifdef CONFIG_ZRAM_LRU_WRITEBACK
+		atomic64_inc(&zram->stats.bd_objcnt);
 		count_vm_event(SQZR_OBJCNT);
-#endif
 		spin_lock(&zram->wb_limit_lock);
 		if (zram->wb_limit_enable && zram->bd_wb_limit > 0)
 			zram->bd_wb_limit -=  1UL << (PAGE_SHIFT - 12);
 		spin_unlock(&zram->wb_limit_lock);
+#endif
 next:
 		zram_slot_unlock(zram, index);
 	}
 
 	if (blk_idx)
+#ifdef CONFIG_ZRAM_LRU_WRITEBACK
 		free_block_bdev(zram, blk_idx, false);
+#else
+		free_block_bdev(zram, blk_idx);
+#endif
 	__free_page(page);
 release_init_lock:
 	up_read(&zram->init_lock);
@@ -2369,7 +2373,11 @@ static ssize_t debug_stat_show(struct device *dev,
 static DEVICE_ATTR_RO(io_stat);
 static DEVICE_ATTR_RO(mm_stat);
 #ifdef CONFIG_ZRAM_WRITEBACK
+#ifdef CONFIG_ZRAM_LRU_WRITEBACK
 static DEVICE_ATTR_RW(bd_stat);
+#else
+static DEVICE_ATTR_RO(bd_stat);
+#endif
 #endif
 static DEVICE_ATTR_RO(debug_stat);
 
