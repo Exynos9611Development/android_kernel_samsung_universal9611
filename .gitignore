@@ -128,3 +128,8 @@ kernel/configs/android-*.cfg
 # Samsung
 scripts/crypto/__pycache__/
 scripts/fmp/__pycache__/
+
+# Kernel build
+out/
+toolchain/
+*.zip
