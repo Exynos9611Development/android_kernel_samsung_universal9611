@@ -98,3 +98,7 @@ subdir-ccflags-y += -Idrivers/media/platform/exynos/fimc-is2/vendor/mcd_v2
 else
 subdir-ccflags-y += -Idrivers/media/platform/exynos/fimc-is2/vendor/default
 endif
+
+ccflags-y += $(DISABLE_LTO)
+subdir-ccflags-y += $(DISABLE_LTO)
+EXTRA_CFLAGS += $(DISABLE_LTO)
