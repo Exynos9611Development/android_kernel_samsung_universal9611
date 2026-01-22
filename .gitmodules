@@ -1,3 +1,8 @@
 [submodule "AnyKernel3"]
 	path = AnyKernel3
 	url = https://github.com/Exynos9611Development/kernel_AnyKernel3
+
+[submodule "KernelSU-Next"]
+	path = KernelSU-Next
+	url = https://github.com/KernelSU-Next/KernelSU-Next
+	branch = legacy
