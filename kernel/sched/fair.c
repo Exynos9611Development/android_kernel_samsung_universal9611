@@ -182,14 +182,21 @@ static inline u64 scale_slice(u64 delta, struct sched_entity *se) {
 static inline struct task_struct *task_of(struct sched_entity *se);
 
 static void update_burst_score(struct sched_entity *se) {
-	if (!entity_is_task(se)) return;
-	struct task_struct *p = task_of(se);
-	u8 prio = p->static_prio - MAX_RT_PRIO;
-	u8 prev_prio = min(39, prio + se->burst_score);
+	struct task_struct *p;
+	u8 prio;
+	u8 prev_prio;
+	u8 new_prio;
+	if (!entity_is_task(se))
+		return;
+
+	p = task_of(se);
+
+	prio = p->static_prio - MAX_RT_PRIO;
+	prev_prio = min(39, prio + se->burst_score);
 
 	se->burst_score = se->burst_penalty >> 2;
 
-	u8 new_prio = min(39, prio + se->burst_score);
+	new_prio = min(39, prio + se->burst_score);
 	if (new_prio != prev_prio)
 		reweight_task(p, new_prio);
 }
@@ -8864,7 +8871,7 @@ static void yield_task_fair(struct rq *rq)
 	 * so we don't do microscopic update in schedule()
 	 * and double the fastpath cost.
 	 */
-	rq_clock_skip_update(rq);
+	rq_clock_skip_update(rq, true);
 
 	set_skip_buddy(se);
 }

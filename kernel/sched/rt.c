@@ -706,7 +706,6 @@ int alloc_rt_sched_group(struct task_group *tg, struct task_group *parent)
 #ifdef CONFIG_SMP
 
 #include "sched-pelt.h"
-#define entity_is_task(se)	(!se->my_q)
 
 extern u64 decay_load(u64 val, u64 n);
 
