@@ -94,6 +94,11 @@ def main():
         action='store_true',
         help="Enable KernelSU"
     )
+    parser.add_argument(
+        '--nodebug',
+        action='store_true',
+        help="Disable debugging features"
+    )
     args = parser.parse_args()
 
     if (not os.path.exists("AnyKernel3/anykernel.sh")) or os.path.exists("AnyKernel3/KernelSU-Next"):
@@ -146,7 +151,8 @@ def main():
     make_defconfig = make_common + [f'exynos9611-{args.target}_defconfig']
     if args.ksu:
         make_defconfig.append('ksu.config')
-
+    if args.nodebug:
+        make_defconfig.append('debug.config')
     start_time = datetime.now()
     
     log('Running make defconfig...')
