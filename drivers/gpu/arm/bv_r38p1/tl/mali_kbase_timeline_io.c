@@ -26,7 +26,6 @@
 
 #include <linux/delay.h>
 #include <linux/poll.h>
-#include <linux/version_compat_defs.h>
 
 #ifndef MALI_STRIP_KBASE_DEVELOPMENT
 /* Development builds need to test instrumentation and enable unprivileged
