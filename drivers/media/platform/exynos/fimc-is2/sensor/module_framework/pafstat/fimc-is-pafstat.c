@@ -1033,6 +1033,7 @@ static const struct of_device_id sensor_paf_pafstat_match[] = {
 MODULE_DEVICE_TABLE(of, sensor_paf_pafstat_match);
 
 static struct platform_driver sensor_paf_pafstat_platform_driver = {
+    .probe  = pafstat_probe,
 	.driver = {
 		.name   = "Sensor-PAF-PAFSTAT",
 		.owner  = THIS_MODULE,
@@ -1042,13 +1043,6 @@ static struct platform_driver sensor_paf_pafstat_platform_driver = {
 
 static int __init sensor_paf_pafstat_init(void)
 {
-	int ret;
-
-	ret = platform_driver_probe(&sensor_paf_pafstat_platform_driver, pafstat_probe);
-	if (ret)
-		err("failed to probe %s driver: %d\n",
-			sensor_paf_pafstat_platform_driver.driver.name, ret);
-
-	return ret;
+    return platform_driver_register(&sensor_paf_pafstat_platform_driver);
 }
-late_initcall_sync(sensor_paf_pafstat_init);
+subsys_initcall(sensor_paf_pafstat_init);
