@@ -181,6 +181,12 @@ static int cpufreq_thermal_notifier(struct notifier_block *nb,
 		 */
 		clipped_freq = cpufreq_cdev->clipped_freq;
 
+		if (clipped_freq == 2314000) {
+		    clipped_freq = 2496000;
+		} else if (clipped_freq == 1742000) {
+               clipped_freq = 2054000;
+		}
+
 		if (policy->max > clipped_freq) {
 			cpufreq_verify_within_limits(policy, 0, clipped_freq);
 			dbg_snapshot_thermal(NULL, 0, cpufreq_cdev->cdev->type, clipped_freq);

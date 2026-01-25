@@ -321,8 +321,22 @@ static void fvmap_copy_from_sram(void __iomem *map_base, void __iomem *sram_base
 			cal_dfs_set_volt_margin(i | ACPM_VCLK_TYPE, margin);
 
 		for (j = 0; j < fvmap_header[i].num_of_lv; j++) {
+			if (fvmap_header[i].num_of_lv == 20 && fvmap_header[i].num_of_members == 2) {
+				if (old->table[j].rate == 2496000) {
+					new->table[j].volt = old->table[j].volt + 43750;
+				} else {
+					new->table[j].volt = old->table[j].volt;
+				}
+			} else if (fvmap_header[i].num_of_lv == 16 && fvmap_header[i].num_of_members == 2) {
+          if (old->table[j].rate == 1950000 || old->table[j].rate == 2054000) {
+            new->table[j].volt = old->table[j].volt - 25000;
+          } else {
+            new->table[j].volt = old->table[j].volt;
+          }
+			} else {
+				new->table[j].volt = old->table[j].volt;
+			}
 			new->table[j].rate = old->table[j].rate;
-			new->table[j].volt = old->table[j].volt;
 			pr_info("  lv : [%7d], volt = %d uV (%d %%) \n",
 				new->table[j].rate, new->table[j].volt,
 				volt_offset_percent);
