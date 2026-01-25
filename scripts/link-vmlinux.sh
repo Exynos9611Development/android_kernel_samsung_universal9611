@@ -80,11 +80,11 @@ lto_lds()
 	fi
 
 	${srctree}/scripts/generate_initcall_order.pl \
-		built-in.o ${KBUILD_VMLINUX_LIBS} \
+		built-in.a ${KBUILD_VMLINUX_LIBS} \
 		> .tmp_lto.lds
 
 	if [ -n "${CONFIG_MODVERSIONS}" ]; then
-		for a in built-in.o ${KBUILD_VMLINUX_LIBS}; do
+		for a in built-in.a ${KBUILD_VMLINUX_LIBS}; do
 			for o in $(${AR} t $a); do
 				if [ -f ${o}.symversions ]; then
 					cat ${o}.symversions >> .tmp_lto.lds
@@ -425,6 +425,12 @@ fi
 
 info LD vmlinux
 vmlinux_link vmlinux "${kallsymso}" "${btf_vmlinux_bin_o}"
+
+# fill in BTF IDs
+if [ -n "${CONFIG_DEBUG_INFO_BTF}" ]; then
+info BTFIDS vmlinux
+${RESOLVE_BTFIDS} vmlinux
+fi
 
 if [ -n "${CONFIG_BUILDTIME_EXTABLE_SORT}" ]; then
 	info SORTEX vmlinux
