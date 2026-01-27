@@ -18,5 +18,10 @@ config TOUCHSCREEN_MELFAS_MSS100_FOD_SUPPORT
 	boolean "MELFAS MSS100 Touchscreen ext FOD AOSP"
 	depends on TOUCHSCREEN_MELFAS_MSS100
 	default n
+
+config MMS_SUPPORT_DEX
+  boolean "OneUI DEX support"
+  depends on OneUI
+  default n
 endif
 

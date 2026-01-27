@@ -90,14 +90,13 @@ def main():
         help="Allow dirty build"
     )
     parser.add_argument(
-        '--ksu',
+        '--oneui',
         action='store_true',
-        help="Enable KernelSU"
+        help="Build OneUI variant"
     )
     args = parser.parse_args()
 
-    if (not os.path.exists("AnyKernel3/anykernel.sh")) or os.path.exists("AnyKernel3/KernelSU-Next"):
-        print(f"Updating git submodules")
+    if not file_exists("AnyKernel3/anykernel.sh"):
         run_command(['git', 'submodule', 'update', '--init'])
     
     if not file_exists("toolchain/bin/clang"):
@@ -121,12 +120,13 @@ def main():
         text=True
     ).stdout.strip()
 
+    rom_tag = 'OUI' if args.oneui else 'AOSP'
     display_info({
         'Kernel name': 'Something New',
         'Branch': f'{current_branch}/{current_commit}',
         'Device': args.target,
+        'ROM': rom_tag,
         'Compiler version': ClangCompiler.get_version(),
-        'KSU': args.ksu,
     })
 
     toolchain_path = f'{parent_dir}/toolchain/bin'
@@ -144,13 +144,14 @@ def main():
         'OBJCOPY=llvm-objcopy', 'ARCH=arm64', f'-j{os.cpu_count()}'
     ]
     make_defconfig = make_common + [f'exynos9611-{args.target}_defconfig']
-    if args.ksu:
-        make_defconfig.append('ksu.config')
+    if args.oneui:
+        make_defconfig.append('oneui.config')
 
     start_time = datetime.now()
     
     log('Running make defconfig...')
     run_command(make_defconfig)
+    
     log('Building kernel...')
     run_command(make_common)
     
@@ -183,8 +184,7 @@ def main():
     copy_file(f'{output_dir}/arch/arm64/boot/dtbo-{args.target}.img', f'{anykernel3_dir}/dtbo.img')
     copy_file(f'{output_dir}/arch/arm64/boot/exynos9611.dtb', f'{anykernel3_dir}/dtb')
 
-    ksu_tag = '_KSU' if args.ksu else ''
-    zip_filename = f'SN{ksu_tag}_{args.target}_{datetime.today().strftime("%Y-%m-%d")}.zip'
+    zip_filename = f'SN_{args.target}_{rom_tag}_{datetime.today().strftime("%Y-%m-%d")}.zip'
 
     os.chdir('AnyKernel3/')
     
