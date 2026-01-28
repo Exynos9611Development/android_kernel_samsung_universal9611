@@ -29,6 +29,11 @@
 #include "../../drivers/block/zram/zram_drv.h"
 #endif
 
+#ifdef CONFIG_PROCESS_RECLAIM
+#include <linux/ctype.h>
+#include <linux/mm_inline.h>
+#endif
+
 void task_mem(struct seq_file *m, struct mm_struct *mm)
 {
 	unsigned long text, lib, swap, anon, file, shmem;
