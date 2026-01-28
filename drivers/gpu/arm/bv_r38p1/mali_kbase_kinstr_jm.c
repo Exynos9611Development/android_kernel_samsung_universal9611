@@ -45,7 +45,6 @@
 #include <linux/slab.h>
 #include <linux/spinlock.h>
 #include <linux/version.h>
-#include <linux/version_compat_defs.h>
 #include <linux/wait.h>
 
 /* Define static_assert().

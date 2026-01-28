@@ -28,7 +28,6 @@
 
 #if IS_ENABLED(CONFIG_DEBUG_FS)
 #include "mali_kbase_csf_tl_reader.h"
-#include <linux/version_compat_defs.h>
 
 #define MAX_SCHED_STATE_STRING_LEN (16)
 static const char *scheduler_state_to_string(struct kbase_device *kbdev,

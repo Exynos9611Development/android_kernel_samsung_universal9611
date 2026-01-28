@@ -93,8 +93,8 @@ static int	audit_initialized;
 #define AUDIT_LOCKED	2
 /* Default state when kernel boots without any parameters. */
 // [ SEC_SELINUX_PORTING_COMMON
-u32		audit_enabled = AUDIT_ON;
-u32		audit_ever_enabled = !!AUDIT_ON;
+u32		audit_enabled = AUDIT_OFF;
+u32		audit_ever_enabled = !!AUDIT_OFF;
 // ] SEC_SELINUX_PORTING_COMMON
 
 EXPORT_SYMBOL_GPL(audit_enabled);
@@ -2348,8 +2348,7 @@ void audit_log_link_denied(const char *operation, const struct path *link)
 		return;
 
 	/* Generate AUDIT_ANOM_LINK with subject, operation, outcome. */
-	ab = audit_log_start(current->audit_context, GFP_KERNEL,
-			     AUDIT_ANOM_LINK);
+	ab = audit_log_start(audit_context(), GFP_KERNEL, AUDIT_ANOM_LINK);
 	if (!ab)
 		goto out;
 	audit_log_format(ab, "op=%s", operation);

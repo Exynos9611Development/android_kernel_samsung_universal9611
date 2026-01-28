@@ -36,7 +36,6 @@
 #include <linux/mutex.h>
 #include <linux/poll.h>
 #include <linux/slab.h>
-#include <linux/version_compat_defs.h>
 #include <linux/workqueue.h>
 
 /* The minimum allowed interval between dumps, in nanoseconds
