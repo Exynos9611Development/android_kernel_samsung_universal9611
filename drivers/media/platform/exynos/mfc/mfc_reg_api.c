@@ -355,13 +355,22 @@ int mfc_set_enc_stream_buffer(struct mfc_ctx *ctx,
 {
 	struct mfc_dev *dev = ctx->dev;
 	dma_addr_t addr;
-	unsigned int size, offset, index;
+	unsigned int size, offset, index, aligned_size;
+	size_t dbuf_size;
+	struct vb2_buffer *vb = &mfc_buf->vb.vb2_buf;
 
-	index = mfc_buf->vb.vb2_buf.index;
+	index = vb->index;
 	addr = mfc_buf->addr[0][0];
-	offset = mfc_buf->vb.vb2_buf.planes[0].data_offset;
-	size = (unsigned int)vb2_plane_size(&mfc_buf->vb.vb2_buf, 0);
-	size = ALIGN(size, 512);
+	offset = vb->planes[0].data_offset;
+	dbuf_size = vb->planes[0].dbuf->size;
+	aligned_size = ALIGN((unsigned int)dbuf_size, 512);
+	
+	if (dbuf_size < aligned_size) {
+		mfc_info_ctx("Decrease buffer size: %u -> %zu\n", aligned_size, dbuf_size);
+		size = (unsigned int)dbuf_size;
+	} else {
+		size = aligned_size;
+	}
 
 	MFC_WRITEL(addr, MFC_REG_E_STREAM_BUFFER_ADDR); /* 16B align */
 	MFC_WRITEL(size, MFC_REG_E_STREAM_BUFFER_SIZE);
@@ -373,6 +382,7 @@ int mfc_set_enc_stream_buffer(struct mfc_ctx *ctx,
 
 	return 0;
 }
+
 
 void mfc_get_enc_frame_buffer(struct mfc_ctx *ctx,
 		dma_addr_t addr[], int num_planes)

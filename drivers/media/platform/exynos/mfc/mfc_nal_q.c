@@ -749,6 +749,8 @@ static int __mfc_nal_q_run_in_buf_enc(struct mfc_ctx *ctx, EncoderInputStr *pInS
 	dma_addr_t src_addr[3] = {0, 0, 0};
 	dma_addr_t addr_2bit[2] = {0, 0};
 	unsigned int index, i;
+	size_t dbuf_size;
+	struct vb2_buffer *vb;
 
 	mfc_debug_enter();
 
@@ -807,8 +809,8 @@ static int __mfc_nal_q_run_in_buf_enc(struct mfc_ctx *ctx, EncoderInputStr *pInS
 
 	if (ctx->src_fmt->fourcc == V4L2_PIX_FMT_NV12M_S10B ||
 		ctx->src_fmt->fourcc == V4L2_PIX_FMT_NV21M_S10B) {
-		addr_2bit[0] = src_addr[0] + NV12N_Y_SIZE(ctx->img_width, ctx->img_height);
-		addr_2bit[1] = src_addr[1] + NV12N_CBCR_SIZE(ctx->img_width, ctx->img_height);
+		addr_2bit[0] = src_addr[0] + NV12N_10B_Y_8B_SIZE(ctx->img_width, ctx->img_height);
+		addr_2bit[1] = src_addr[1] + NV12N_10B_CBCR_8B_SIZE(ctx->img_width, ctx->img_height);
 
 		for (i = 0; i < raw->num_planes; i++) {
 			pInStr->Frame2bitAddr[i] = addr_2bit[i];
@@ -845,21 +847,29 @@ static int __mfc_nal_q_run_in_buf_enc(struct mfc_ctx *ctx, EncoderInputStr *pInS
 
 	/* move dst_queue -> dst_queue_nal_q */
 	dst_mb = mfc_get_move_buf(&ctx->buf_queue_lock,
-		&ctx->dst_buf_nal_queue, &ctx->dst_buf_queue, MFC_BUF_SET_USED, MFC_QUEUE_ADD_BOTTOM);
+			&ctx->dst_buf_nal_queue, &ctx->dst_buf_queue,
+			MFC_BUF_SET_USED, MFC_QUEUE_ADD_BOTTOM);
 	if (!dst_mb) {
 		mfc_err_dev("[NALQ] no dst buffers\n");
 		return -EAGAIN;
 	}
 
+	/* dst buffer setting */
+	vb = &dst_mb->vb.vb2_buf;
+	index = vb->index;
+	dbuf_size = vb->planes[0].dbuf->size;
+	
 	pInStr->StreamBufferAddr = dst_mb->addr[0][0];
-	pInStr->StreamBufferSize = (unsigned int)vb2_plane_size(&dst_mb->vb.vb2_buf, 0);
+	pInStr->StreamBufferSize = (unsigned int)dbuf_size;
 	pInStr->StreamBufferSize = ALIGN(pInStr->StreamBufferSize, 512);
 
-	if (call_cop(ctx, set_buf_ctrls_val_nal_q_enc, ctx, &ctx->src_ctrls[index], pInStr) < 0)
-		mfc_err_ctx("[NALQ] failed in set_buf_ctrals_val in nal q\n");
+	mfc_debug(2, "[NALQ][BUFINFO] ctx[%d] set dst index: %d, addr: 0x%08llx, size: %u\n",
+			ctx->num, index, pInStr->StreamBufferAddr, pInStr->StreamBufferSize);
 
-	mfc_debug(2, "[NALQ][BUFINFO] ctx[%d] set dst index: %d, addr: 0x%08x\n",
-			ctx->num, dst_mb->vb.vb2_buf.index, pInStr->StreamBufferAddr);
+	if (call_cop(ctx, set_buf_ctrls_val_nal_q_enc, ctx,
+				&ctx->src_ctrls[index], pInStr) < 0)
+		mfc_err_ctx("[NALQ] failed in set_buf_ctrls_val in nal q\n");
+
 	mfc_debug(2, "[NALQ] input queue, src_buf_queue -> src_buf_nal_queue, index:%d\n",
 			src_mb->vb.vb2_buf.index);
 	mfc_debug(2, "[NALQ] input queue, dst_buf_queue -> dst_buf_nal_queue, index:%d\n",
