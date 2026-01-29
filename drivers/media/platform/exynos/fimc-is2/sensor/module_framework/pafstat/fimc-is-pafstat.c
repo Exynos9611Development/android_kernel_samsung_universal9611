@@ -21,7 +21,7 @@
 #include "fimc-is-hw-pafstat.h"
 #include "fimc-is-interface-library.h"
 
-static struct fimc_is_pafstat pafstat_devices[MAX_NUM_OF_PAFSTAT] __cacheline_aligned;
+static struct fimc_is_pafstat pafstat_devices[MAX_NUM_OF_PAFSTAT];
 atomic_t	g_pafstat_rsccount;
 
 static void prepare_pafstat_sfr_dump(struct fimc_is_pafstat *pafstat)
@@ -88,7 +88,7 @@ void pafstat_sfr_dump(struct fimc_is_pafstat *pafstat)
 #endif
 }
 
-static noinline irqreturn_t fimc_is_isr_pafstat(int irq, void *data)
+static irqreturn_t fimc_is_isr_pafstat(int irq, void *data)
 {
 	struct fimc_is_pafstat *pafstat;
 	u32 irq_src, irq_mask, status;
@@ -97,6 +97,9 @@ static noinline irqreturn_t fimc_is_isr_pafstat(int irq, void *data)
 	pafstat = data;
 	if (pafstat == NULL)
 		return IRQ_NONE;
+
+	if (atomic_read(&pafstat->sfr_state) < PAFSTAT_SFR_READY)
+		return IRQ_HANDLED;
 
 	irq_src = pafstat_hw_g_irq_src(pafstat->regs);
 	irq_mask = pafstat_hw_g_irq_mask(pafstat->regs);
@@ -107,10 +110,8 @@ static noinline irqreturn_t fimc_is_isr_pafstat(int irq, void *data)
 	if (status & (1 << PAFSTAT_INT_FRAME_START)) {
 		atomic_set(&pafstat->Vvalid, V_VALID);
 
-		if (atomic_read(&pafstat->sfr_state) == PAFSTAT_SFR_READY) {
+		if (atomic_read(&pafstat->sfr_state) == PAFSTAT_SFR_READY)
 			atomic_set(&pafstat->sfr_state, PAFSTAT_SFR_APPLIED);
-			smp_wmb();
-		}
 
 		atomic_inc(&pafstat->fs);
 		dbg_isr("[%d][F:%d] F.S (0x%x)", pafstat, pafstat->id, atomic_read(&pafstat->fs), status);
@@ -139,26 +140,15 @@ static noinline irqreturn_t fimc_is_isr_pafstat(int irq, void *data)
 		atomic_add(pafstat->fro_cnt, &pafstat->fe);
 		pafstat_hw_s_timeout_cnt_clear(pafstat->regs);
 		atomic_set(&pafstat->Vvalid, V_BLANK);
-		
-		smp_wmb();
-		
-		if (waitqueue_active(&pafstat->wait_queue)) {
-			wake_up(&pafstat->wait_queue);
-		} else {
-			wake_up_all(&pafstat->wait_queue);
-		}
+		wake_up(&pafstat->wait_queue);
 	}
 
 	if (status & (1 << PAFSTAT_INT_FRAME_LINE)) {
 		atomic_inc(&pafstat->cl);
 		dbg_isr("[%d][F:%d] LINE INTR (0x%x)", pafstat, pafstat->id, atomic_read(&pafstat->cl), status);
 		atomic_add(pafstat->fro_cnt, &pafstat->cl);
-
-		if (atomic_read(&pafstat->sfr_state) == PAFSTAT_SFR_APPLIED) {
-			if (!test_bit(TASKLET_STATE_SCHED, &pafstat->tasklet_fwin_stat.state)) {
-				tasklet_schedule(&pafstat->tasklet_fwin_stat);
-			}
-		}
+		if (atomic_read(&pafstat->sfr_state) == PAFSTAT_SFR_APPLIED)
+			tasklet_schedule(&pafstat->tasklet_fwin_stat);
 	}
 
 	if (status & (1 << PAFSTAT_INT_FRAME_FAIL)) {
@@ -247,6 +237,7 @@ static void pafstat_tasklet_fwin_stat(unsigned long data)
 
 			frameptr = atomic_read(&pafstat->frameptr_fwin_stat) % framemgr->num_frames;
 			frame = &framemgr->frames[frameptr];
+			
 			frame->fcount = sensor->fcount;
 
 			pafstat_hw_g_fwin_stat(curr_regs, (void *)frame->kvaddr_buffer[0],
@@ -277,6 +268,7 @@ static void pafstat_worker_fwin_stat(struct work_struct *work)
 	unsigned long flag;
 
 	pafstat = container_of(work, struct fimc_is_pafstat, work_fwin_stat);
+		
 	module = (struct fimc_is_module_enum *)v4l2_get_subdev_hostdata(pafstat->subdev);
 	if (!module) {
 		err("failed to get module");
@@ -292,7 +284,7 @@ static void pafstat_worker_fwin_stat(struct work_struct *work)
 	sensor = (struct fimc_is_device_sensor *)v4l2_get_subdev_hostdata(subdev_module);
 
 	spin_lock_irqsave(&pafstat->slock_paf_action, flag);
-	list_for_each_entry_safe(pa, temp, &pafstat->list_of_paf_action, list) {
+	list_for_each_entry_safe(pa, temp, &pafstat->list_of_paf_action, list) {		
 		switch (pa->type) {
 		case VC_STAT_TYPE_PAFSTAT_FLOATING:
 #ifdef ENABLE_FPSIMD_FOR_USER
@@ -419,6 +411,7 @@ int pafstat_hw_set_regs(struct v4l2_subdev *subdev,
 				sensor_mode, pafstat->in_height, med_line);
 			pafstat_hw_com_reset_med_line(pafstat->regs, distance_pd_pixel);
 			pafstat_hw_com_reset_med_line(pafstat->regs_b, distance_pd_pixel);
+			atomic_add(pafstat->fro_cnt, &pafstat->fe_img);
 		}
 #endif
 	} else {
@@ -448,6 +441,7 @@ int pafstat_hw_set_regs(struct v4l2_subdev *subdev,
 			dbg_pafstat(1, "SensorPD mode(%d), pafstat->in_height(%d), MED LINE_NUM(%d)\n",
 				sensor_mode, pafstat->in_height, med_line);
 			pafstat_hw_com_reset_med_line(next_regs, distance_pd_pixel);
+			atomic_add(pafstat->fro_cnt, &pafstat->fe_img);
 		}
 #endif
 
@@ -506,7 +500,6 @@ int pafstat_register_notifier(struct v4l2_subdev *subdev, enum itf_vc_stat_type 
 		spin_lock_irqsave(&pafstat->slock_paf_action, flag);
 		list_add(&pa->list, &pafstat->list_of_paf_action);
 		spin_unlock_irqrestore(&pafstat->slock_paf_action, flag);
-
 		break;
 	default:
 		return -EINVAL;
@@ -981,15 +974,6 @@ static int __init pafstat_probe(struct platform_device *pdev)
 	atomic_set(&pafstat->Vvalid, V_BLANK);
 	atomic_set(&pafstat->frameptr_fwin_stat, 0);
 
-	pafstat->wq_fwin_stat = alloc_workqueue("pafstat_wq_%d",
-						WQ_UNBOUND | WQ_HIGHPRI,
-						1, id);
-	if (!pafstat->wq_fwin_stat) {
-		dev_err(dev, "failed to create workqueue\n");
-		ret = -ENOMEM;
-		goto err_ioremap_b;
-	}
-
 	pafstat->irq = platform_get_irq(pdev, 0);
 	if (pafstat->irq < 0) {
 		dev_err(dev, "failed to get IRQ resource: %d\n", pafstat->irq);
@@ -1040,10 +1024,6 @@ static int __init pafstat_probe(struct platform_device *pdev)
 err_alloc:
 	devm_free_irq(dev, pafstat->irq, pafstat);
 err_irq:
-	if (pafstat->wq_fwin_stat) {
-		destroy_workqueue(pafstat->wq_fwin_stat);
-		pafstat->wq_fwin_stat = NULL;
-	}
 	devm_iounmap(dev, pafstat->regs_b);
 err_ioremap_b:
 	devm_release_mem_region(dev, res_b->start, resource_size(res_b));
