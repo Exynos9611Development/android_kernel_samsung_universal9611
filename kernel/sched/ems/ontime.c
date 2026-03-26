@@ -207,7 +207,7 @@ ontime_select_target_cpu(struct task_struct *p, struct cpumask *fit_cpus)
 
 			if (idle_cpu(i)) {
 				/* 1. Find shallowest idle_cpu */
-				struct cpuidle_state *idle = idle_get_state(cpu_rq(cpu));
+				struct cpuidle_state *idle = idle_get_state(cpu_rq(i));
 
 				if (!idle) {
 					best_cpu = i;
