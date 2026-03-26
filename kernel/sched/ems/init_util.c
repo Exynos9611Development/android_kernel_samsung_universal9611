@@ -112,7 +112,7 @@ static ssize_t store_initial_util_ratio(struct kobject *kobj,
         if (sscanf(buf, "%ld", &input) != 1)
                 return -EINVAL;
 
-        init_util_ratio = !!input;
+        init_util_ratio = input;
 
         return count;
 }
