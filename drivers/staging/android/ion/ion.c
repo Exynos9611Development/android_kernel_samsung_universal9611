@@ -383,14 +383,17 @@ static void ion_dma_buf_kunmap(struct dma_buf *dmabuf, unsigned long offset,
 static void *ion_dma_buf_vmap(struct dma_buf *dmabuf)
 {
 	struct ion_buffer *buffer = dmabuf->priv;
+	void *vaddr = buffer->vaddr;
 
 	if (buffer->heap->ops->map_kernel) {
 		mutex_lock(&buffer->lock);
-		ion_buffer_kmap_get(buffer);
+		vaddr = ion_buffer_kmap_get(buffer);
 		mutex_unlock(&buffer->lock);
+		if (IS_ERR(vaddr))
+			return vaddr;
 	}
 
-	return buffer->vaddr;
+	return vaddr;
 }
 
 static void ion_dma_buf_vunmap(struct dma_buf *dmabuf, void *ptr)
