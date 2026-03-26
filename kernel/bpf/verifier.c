@@ -10614,6 +10614,7 @@ static int resolve_pseudo_ldimm64(struct bpf_verifier_env *env)
 			if (IS_ERR(map)) {
 				verbose(env, "fd %d is not pointing to valid bpf_map\n",
 					insn[0].imm);
+				fdput(f);
 				return PTR_ERR(map);
 			}
 
@@ -12708,14 +12709,8 @@ skip_full_check:
 	env->verification_time = ktime_get_ns() - start_time;
 	print_verification_stats(env);
 
-	// ANDROID: Do not fail to load if log buffer passed in from userspace
-	// is too small. The bpf log logic is refactored in the 6.4 kernel
-	// acknowledging the shortcomings of this approch. Instead of backporting
-	// the significant changes, simply ignore the fact that the log is full.
-	// For more information see commit 121664093803: bpf: Switch BPF verifier
-	// log to be a rotating log by default
-	//if (log->level && bpf_verifier_log_full(log))
-	//	ret = -ENOSPC;
+	if (log->level && bpf_verifier_log_full(log))
+		ret = -ENOSPC;
 	if (log->level && !log->ubuf) {
 		ret = -EFAULT;
 		goto err_release_maps;

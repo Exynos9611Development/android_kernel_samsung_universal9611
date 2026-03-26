@@ -221,15 +221,19 @@ static void __init build_prefer_cpus(void)
 
 	prefer_perf_services = kcalloc(prefer_perf_service_count,
 				sizeof(struct prefer_perf), GFP_KERNEL);
-	if (!prefer_perf_services)
+	if (!prefer_perf_services) {
+		of_node_put(dn);
 		return;
+	}
 
 	for_each_child_of_node(dn, child) {
 		const char *mask[NR_CPUS];
 		int i, proplen;
 
-		if (index >= prefer_perf_service_count)
-			return;
+		if (index >= prefer_perf_service_count) {
+			of_node_put(child);
+			break;
+		}
 
 		of_property_read_u32(child, "boost",
 					&prefer_perf_services[index].boost);
@@ -253,6 +257,8 @@ static void __init build_prefer_cpus(void)
 next:
 		index++;
 	}
+
+	of_node_put(dn);
 }
 
 static int __init init_service(void)

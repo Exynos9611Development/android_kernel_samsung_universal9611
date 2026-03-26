@@ -874,14 +874,14 @@ parse_ontime(struct device_node *dn, struct ontime_cond *cond, int cnt)
 	snprintf(name, sizeof(name), "coregroup%d", cnt);
 	coregroup = of_get_child_by_name(ontime, name);
 	if (!coregroup)
-		goto disable;
+		goto disable_put_ontime;
 	cond->coregroup = cnt;
 
 	capacity = get_cpu_max_capacity(cpumask_first(&cond->cpus));
 
 	/* If capacity of this coregroup is 0, disable ontime of this coregroup */
 	if (capacity == 0)
-		goto disable;
+		goto disable_put_both;
 
 	/* If any of ontime parameter isn't, disable ontime of this coregroup */
 	res |= of_property_read_s32(coregroup, "upper-boundary", &prop);
@@ -894,11 +894,17 @@ parse_ontime(struct device_node *dn, struct ontime_cond *cond, int cnt)
 	cond->coverage_ratio = prop;
 
 	if (res)
-		goto disable;
+		goto disable_put_both;
 
 	cond->enabled = true;
+	of_node_put(coregroup);
+	of_node_put(ontime);
 	return;
 
+disable_put_both:
+	of_node_put(coregroup);
+disable_put_ontime:
+	of_node_put(ontime);
 disable:
 	pr_err("ONTIME(%s): failed to parse ontime node\n", __func__);
 	cond->enabled = false;
@@ -927,6 +933,11 @@ static int __init init_ontime(void)
 			continue;
 
 		cond = kzalloc(sizeof(struct ontime_cond), GFP_KERNEL);
+		if (!cond) {
+			pr_err("ontime: failed to allocate ontime_cond\n");
+			of_node_put(dn);
+			return -ENOMEM;
+		}
 
 		cpumask_copy(&cond->cpus, cpu_coregroup_mask(cpu));
 

@@ -1072,7 +1072,10 @@ static int init_constraint_table_dt(struct exynos_cpufreq_domain *domain,
 	if (!table)
 		return -ENOMEM;
 
-	of_property_read_u32_array(dn, "table", (unsigned int *)table, size);
+	if (of_property_read_u32_array(dn, "table", (unsigned int *)table, size)) {
+		kfree(table);
+		return -EINVAL;
+	}
 	for (index = 0; index < domain->table_size; index++) {
 		unsigned int freq = domain->freq_table[index].frequency;
 
@@ -1243,6 +1246,15 @@ static __init int early_init_domain(struct exynos_cpufreq_domain *domain,
 static __init void __free_domain(struct exynos_cpufreq_domain *domain)
 {
 	struct exynos_cpufreq_dm *dm;
+	struct exynos_ufc *ufc;
+
+	while (!list_empty(&domain->ufc_list)) {
+		ufc = list_last_entry(&domain->ufc_list,
+				struct exynos_ufc, list);
+		list_del(&ufc->list);
+		kfree(ufc->info.freq_table);
+		kfree(ufc);
+	}
 
 	while (!list_empty(&domain->dm_list)) {
 		dm = list_last_entry(&domain->dm_list,
@@ -1311,8 +1323,10 @@ static __init struct exynos_cpufreq_domain *alloc_domain(struct device_node *dn)
 
 		dm->c.freq_table = kzalloc(sizeof(struct exynos_dm_freq)
 					* domain->table_size, GFP_KERNEL);
-		if (!dm->c.freq_table)
+		if (!dm->c.freq_table) {
+			kfree(dm);
 			goto free;
+		}
 
 		list_add_tail(&dm->list, &domain->dm_list);
 	}
@@ -1361,7 +1375,11 @@ static int __init exynos_cpufreq_init(void)
 
 	ret = cpufreq_register_driver(&exynos_driver);
 	if (ret) {
+		struct exynos_cpufreq_domain *domain, *next;
+
 		pr_err("failed to register cpufreq driver\n");
+		list_for_each_entry_safe(domain, next, &domains, list)
+			free_domain(domain);
 		return ret;
 	}
 

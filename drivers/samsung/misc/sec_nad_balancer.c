@@ -554,7 +554,7 @@ static int sec_nad_balancer_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	pinfo->dev = sec_device_create(pinfo, "sec_nad_balancer");
-	if (IS_ERR(sec_nad_balancer)) {
+	if (IS_ERR(pinfo->dev)) {
 		pr_err("%s Failed to create device(sec_nad_balancer)!\n", __func__);
 		ret = -ENODEV;
 		goto out;
@@ -585,11 +585,11 @@ static int sec_nad_balancer_probe(struct platform_device *pdev)
 	return ret;
 
 err_create_nad_balancer_sysfs:
-	sec_device_destroy(sec_nad_balancer->devt);
+	sec_device_destroy(pinfo->dev->devt);
 out:
-	if (!pinfo)
+	if (pinfo)
 		devm_kfree(&pdev->dev, pinfo);
-	if (!pdata)
+	if (pdata)
 		devm_kfree(&pdev->dev, pdata);
 	return ret;
 }

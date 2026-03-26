@@ -361,6 +361,12 @@ static int isg5320a_setup_reg(struct isg5320a_data *data)
 	pr_info("%s %s - size of the file : %ld(bytes)\n", ISG5320A_TAG,
 		__func__, file_size);
 	file_data = vzalloc(file_size);
+	if (!file_data) {
+		pr_err("%s %s - vzalloc failed\n", ISG5320A_TAG, __func__);
+		filp_close(fp, current->files);
+		set_fs(old_fs);
+		return -ENOMEM;
+	}
 	pos = 0;
 	ret = vfs_read(fp, (char __user *)file_data, file_size, &pos);
 	if (ret != file_size) {

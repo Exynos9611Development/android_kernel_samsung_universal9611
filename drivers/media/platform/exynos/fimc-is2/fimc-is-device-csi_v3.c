@@ -1666,8 +1666,10 @@ int fimc_is_csi_probe(void *parent, u32 instance)
 	}
 
 	csi->phy = devm_phy_get(&pdev->dev, "csis_dphy");
-	if (IS_ERR(csi->phy))
-		return PTR_ERR(csi->phy);
+	if (IS_ERR(csi->phy)) {
+		ret = PTR_ERR(csi->phy);
+		goto err_get_resource;
+	}
 
 #if defined(CONFIG_SECURE_CAMERA_USE) && defined(NOT_SEPERATED_SYSREG)
 	csi->extra_phy = devm_phy_get(&pdev->dev, "extra_csis_dphy");
@@ -1712,6 +1714,8 @@ int fimc_is_csi_probe(void *parent, u32 instance)
 	return 0;
 
 err_reg_v4l2_subdev:
+	if (csi->workqueue)
+		destroy_workqueue(csi->workqueue);
 err_get_irq:
 	iounmap(csi->base_reg);
 

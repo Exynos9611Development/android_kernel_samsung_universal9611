@@ -402,6 +402,8 @@ static ssize_t sensor_dump_show(struct device *dev, struct device_attribute *att
 
 	sensor_dump = (char *)kzalloc((sensor_dump_length(DUMPREGISTER_MAX_SIZE) + LENGTH_SENSOR_TYPE_MAX +
 				       3) * (sizeof(types) / sizeof(types[0])), GFP_KERNEL);
+	if (!sensor_dump)
+		return -ENOMEM;
 
 	for (i = 0; i < sizeof(types) / sizeof(types[0]); i++) {
 		if (data->sensor_dump[types[i]] != NULL) {
@@ -416,7 +418,11 @@ static ssize_t sensor_dump_show(struct device *dev, struct device_attribute *att
 		if (data->en_info[i].regi_time.timestamp != 0)
 			cnt ++;
 	}
-	time_info = (char *)kzalloc(TIMEINFO_SIZE * 3 * cnt, GFP_KERNEL);
+	time_info = (char *)kzalloc(TIMEINFO_SIZE * 3 * (cnt ? cnt : 1), GFP_KERNEL);
+	if (!time_info) {
+		kfree(sensor_dump);
+		return -ENOMEM;
+	}
 
 	for (i = 0; i < SS_SENSOR_TYPE_MAX; i++) {
 		if (data->en_info[i].regi_time.timestamp != 0) {

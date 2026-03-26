@@ -2961,6 +2961,7 @@ static int displayport_probe(struct platform_device *pdev)
 	displayport->hdcp2_wq = create_singlethread_workqueue(dev_name(&pdev->dev));
 	if (!displayport->hdcp2_wq) {
 		displayport_err("create hdcp2_wq failed.\n");
+		destroy_workqueue(displayport->dp_wq);
 		goto err_dt;
 	}
 

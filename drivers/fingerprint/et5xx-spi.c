@@ -327,12 +327,15 @@ static int etspi_sec_spi_prepare(struct sec_spi_info *spi_info,
 	fp_spi_sclk = clk_get(NULL, "fp-spi-sclk");
 	if (IS_ERR(fp_spi_sclk)) {
 		pr_err("%s Can't get fp_spi_sclk\n", __func__);
+		clk_put(fp_spi_pclk);
 		return PTR_ERR(fp_spi_sclk);
 	}
 #if defined(CONFIG_SOC_EXYNOS7870) || defined(CONFIG_SOC_EXYNOS7880)
 	fp_spi_dma = clk_get(NULL, "apb_pclk");
 	if (IS_ERR(fp_spi_dma)) {
 		pr_err("%s Can't get apb_pclk\n", __func__);
+		clk_put(fp_spi_pclk);
+		clk_put(fp_spi_sclk);
 		return PTR_ERR(fp_spi_dma);
 	}
 #endif
@@ -378,12 +381,15 @@ static int etspi_sec_spi_unprepare(struct sec_spi_info *spi_info,
 	fp_spi_sclk = clk_get(NULL, "fp-spi-sclk");
 	if (IS_ERR(fp_spi_sclk)) {
 		pr_err("%s Can't get fp_spi_sclk\n", __func__);
+		clk_put(fp_spi_pclk);
 		return PTR_ERR(fp_spi_sclk);
 	}
 #if defined(CONFIG_SOC_EXYNOS7870) || defined(CONFIG_SOC_EXYNOS7880)
 	fp_spi_dma = clk_get(NULL, "apb_pclk");
 	if (IS_ERR(fp_spi_dma)) {
 		pr_err("%s Can't get apb_pclk\n", __func__);
+		clk_put(fp_spi_pclk);
+		clk_put(fp_spi_sclk);
 		return PTR_ERR(fp_spi_dma);
 	}
 #endif
@@ -1050,12 +1056,12 @@ int etspi_platformInit(struct etspi_data *etspi)
 			goto etspi_platformInit_sleep_failed;
 		}
 
-		gpio_direction_output(etspi->sleepPin, 0);
+		status = gpio_direction_output(etspi->sleepPin, 0);
 		if (status < 0) {
 			pr_err("%s gpio_direction_output SLEEP failed\n",
 					__func__);
 			status = -EBUSY;
-			goto etspi_platformInit_sleep_failed;
+			goto etspi_platformInit_sleep_dir_failed;
 		}
 
 		status = gpio_request(etspi->drdyPin, "etspi_drdy");
@@ -1094,9 +1100,11 @@ int etspi_platformInit(struct etspi_data *etspi)
 etspi_platformInit_gpio_init_failed:
 	gpio_free(etspi->drdyPin);
 etspi_platformInit_drdy_failed:
+etspi_platformInit_sleep_dir_failed:
 	gpio_free(etspi->sleepPin);
 etspi_platformInit_sleep_failed:
-	gpio_free(etspi->ldo_pin);
+	if (etspi->ldo_pin)
+		gpio_free(etspi->ldo_pin);
 etspi_platformInit_ldo_failed:
 	pr_err("%s is failed\n", __func__);
 	return status;
@@ -1587,7 +1595,7 @@ static int etspi_probe(struct spi_device *spi)
 	if (status != 0) {
 		pr_err("%s spi_setup() is failed. status : %d\n",
 			__func__, status);
-		return status;
+		goto etspi_probe_platformInit_failed;
 	}
 #endif
 	etspi->spi_value = 0;

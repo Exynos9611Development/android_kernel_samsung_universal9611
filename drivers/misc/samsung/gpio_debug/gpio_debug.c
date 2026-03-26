@@ -139,7 +139,10 @@ static ssize_t event_write(struct file *file, const char __user *user_buf, size_
 	ret = (ssize_t)strnlen(user_string, count + 1);
 
 	if (kstrtou32(user_string, 10, &new_index)) {
+		kfree(user_string);
+		mutex_unlock(&debug_lock);
 		return -EINVAL;
+	}
 
 	gpio_debug_event_link(event, new_index);
 

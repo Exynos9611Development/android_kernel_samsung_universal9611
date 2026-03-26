@@ -1095,7 +1095,8 @@ static int sm5713_charger_probe(struct platform_device *pdev)
 	charger->wqueue = create_singlethread_workqueue(dev_name(charger->dev));
 	if (!charger->wqueue) {
 		dev_err(charger->dev, "%s: fail to create workqueue\n", __func__);
-		return -ENOMEM;
+		ret = -ENOMEM;
+		goto err_parse_dt;
 	}
 	charger->slow_rate_chg_mode = false;
 	INIT_DELAYED_WORK(&charger->aicl_work, aicl_work);

@@ -162,6 +162,11 @@ void handle_sensor_spec(struct ssp_data *data, char *dataframe, int *idx)
 	ssp_infof("count %d unit size %d", count, sizeof(struct sensor_spec_t));
 
 	data->sensor_spec = kzalloc(size + prev_size, GFP_KERNEL);
+	if (!data->sensor_spec) {
+		ssp_errf("kzalloc failed for sensor_spec");
+		kfree(prev_sensor_spec);
+		return;
+	}
 	if (prev_sensor_spec != NULL) { // prev_size != 0
 		memcpy(data->sensor_spec, prev_sensor_spec, prev_size);
 		kfree(prev_sensor_spec);

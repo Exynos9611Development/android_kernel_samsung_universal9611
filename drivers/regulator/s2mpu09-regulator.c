@@ -496,6 +496,7 @@ static int s2mpu09_pmic_dt_parse_pdata(struct s2mpu09_dev *iodev,
 	if (!rdata) {
 		dev_err(iodev->dev,
 			"could not allocate memory for regulator data\n");
+		of_node_put(regulators_np);
 		return -ENOMEM;
 	}
 
@@ -520,6 +521,8 @@ static int s2mpu09_pmic_dt_parse_pdata(struct s2mpu09_dev *iodev,
 		rdata->reg_node = reg_np;
 		rdata++;
 	}
+
+	of_node_put(regulators_np);
 
 	return 0;
 }

@@ -65,6 +65,10 @@ void handle_packet(struct ssp_data *data, char *packet, int packet_size)
 						kfree(msg->buffer);
 					}
 					msg->buffer = kzalloc(msg->length, GFP_KERNEL);
+					if (!msg->buffer) {
+						ssp_errf("kzalloc failed for msg buffer");
+						goto exit;
+					}
 					memcpy(msg->buffer, packet + SSP_MSG_HEADER_SIZE, msg->length);
 
 				} else {
@@ -84,6 +88,10 @@ exit:
 	} else if (msg_cmd == CMD_REPORT) {
 
 	    buffer = kzalloc(msg_length, GFP_KERNEL);
+		if (!buffer) {
+			ssp_errf("kzalloc failed for CMD_REPORT buffer");
+			return;
+		}
 		memcpy(buffer, &packet[SSP_MSG_HEADER_SIZE], msg_length);
 		parse_dataframe(data, buffer, msg_length);
 		kfree(buffer);
@@ -110,13 +118,14 @@ static int do_transfer(struct ssp_data *data, struct ssp_msg *msg, int timeout)
 	}
 
 	msg->timestamp = get_current_timestamp();
-	memcpy(ssp_cmd_data, msg, SSP_MSG_HEADER_SIZE);
-	if (msg->length > 0) {
-		memcpy(&ssp_cmd_data[SSP_MSG_HEADER_SIZE], msg->buffer, msg->length);
-	} else if (msg->length > (SSP_CMD_SIZE - SSP_MSG_HEADER_SIZE)) {
+	if (msg->length > (SSP_CMD_SIZE - SSP_MSG_HEADER_SIZE)) {
 		ssp_errf("command size over !");
 		mutex_unlock(&data->comm_mutex);
 		return -EINVAL;
+	}
+	memcpy(ssp_cmd_data, msg, SSP_MSG_HEADER_SIZE);
+	if (msg->length > 0) {
+		memcpy(&ssp_cmd_data[SSP_MSG_HEADER_SIZE], msg->buffer, msg->length);
 	}
 
 	if (msg->done != NULL) {
@@ -161,9 +170,6 @@ exit:
 			list_del(&msg->list);
 			is_ssp_shutdown = !is_sensorhub_working(data);
 			data->cnt_timeout += (is_ssp_shutdown)? 0 : 1;
-			if (msg->done != NULL) {
-				list_del(&msg->list);
-			}
 
 			ssp_errf("cnt_timeout %d, ssp_down %d !!",
 			         data->cnt_timeout, is_ssp_shutdown);
@@ -215,6 +221,8 @@ int ssp_send_command(struct ssp_data *data, u8 cmd, u8 type, u8 subcmd,
 		return -ENODEV;
 	}
 	msg = kzalloc(sizeof(*msg), GFP_KERNEL);
+	if (!msg)
+		return -ENOMEM;
 	msg->cmd = cmd;
 	msg->type = type;
 	msg->subcmd = subcmd;
@@ -223,6 +231,10 @@ int ssp_send_command(struct ssp_data *data, u8 cmd, u8 type, u8 subcmd,
 	if (timeout > 0) {
 		if (send_buf != NULL && send_buf_len != 0) {
 			msg->buffer = kzalloc(send_buf_len, GFP_KERNEL);
+			if (!msg->buffer) {
+				kfree(msg);
+				return -ENOMEM;
+			}
 			memcpy(msg->buffer, send_buf, send_buf_len);
 		} else {
 			msg->length = 0;
@@ -231,6 +243,10 @@ int ssp_send_command(struct ssp_data *data, u8 cmd, u8 type, u8 subcmd,
 	} else {
 		if (send_buf != NULL && send_buf_len != 0) {
 			msg->buffer = kzalloc(send_buf_len, GFP_KERNEL);
+			if (!msg->buffer) {
+				kfree(msg);
+				return -ENOMEM;
+			}
 			memcpy(msg->buffer, send_buf, send_buf_len);
 		} else {
 			msg->length = 0;
@@ -252,11 +268,16 @@ int ssp_send_command(struct ssp_data *data, u8 cmd, u8 type, u8 subcmd,
 	    (status != ERROR)) {
 		if (timeout > 0) {
 			*receive_buf = kzalloc(msg->length, GFP_KERNEL);
+			if (!*receive_buf) {
+				clean_msg(msg);
+				return -ENOMEM;
+			}
 			*receive_buf_len = msg->length;
 			memcpy(*receive_buf, msg->buffer, msg->length);
 		} else {
 			ssp_errf("CMD_GETVALUE zero timeout");
 			//mutex_unlock(&data->cmd_mutex);
+			clean_msg(msg);
 			return -EINVAL;
 		}
 	}

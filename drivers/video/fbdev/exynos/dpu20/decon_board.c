@@ -353,7 +353,13 @@ static struct timer_info *find_timer(const char *name)
 
 	dbg_info("%s is not exist, so create it\n", name);
 	timer = kzalloc(sizeof(struct timer_info), GFP_KERNEL);
+	if (!timer)
+		return NULL;
 	timer->name = kstrdup(name, GFP_KERNEL);
+	if (!timer->name) {
+		kfree(timer);
+		return NULL;
+	}
 
 	return timer;
 }
@@ -444,6 +450,9 @@ static int decide_subinfo(struct device_node *np, struct action_info *action)
 
 		if (is_dummy_regulator(action->bulk)) {
 			dbg_warn("regulator_bulk_get invalid %s maybe dummy regulator\n", subinfo);
+			regulator_bulk_free(1, action->bulk);
+			kfree(action->bulk);
+			action->bulk = NULL;
 			ret = -EINVAL;
 			goto exit;
 		}
@@ -457,12 +466,18 @@ static int decide_subinfo(struct device_node *np, struct action_info *action)
 
 		if (is_dummy_regulator(action->bulk)) {
 			dbg_warn("regulator_bulk_get invalid %s maybe dummy regulator\n", subinfo);
+			regulator_bulk_free(1, action->bulk);
+			kfree(action->bulk);
+			action->bulk = NULL;
 			ret = -EINVAL;
 			goto exit;
 		}
 
 		if (!isdigit(subinfo[0])) {
 			dbg_warn("set_voltage need digit parameter %s\n", subinfo);
+			regulator_bulk_free(1, action->bulk);
+			kfree(action->bulk);
+			action->bulk = NULL;
 			ret = -EINVAL;
 			goto exit;
 		}
@@ -896,7 +911,13 @@ static inline struct list_head *find_list(const char *name)
 
 	dbg_info("%s is not exist, so create it\n", name);
 	dt_node = kzalloc(sizeof(struct dt_node_info), GFP_KERNEL);
+	if (!dt_node)
+		return NULL;
 	dt_node->name = kstrdup(name, GFP_KERNEL);
+	if (!dt_node->name) {
+		kfree(dt_node);
+		return NULL;
+	}
 	INIT_LIST_HEAD(&dt_node->node);
 
 	dt_nodes[idx] = dt_node;
@@ -1468,6 +1489,8 @@ static int __of_update_recommend(struct device_node *np, unsigned int recommend)
 		prop_new->length = sizeof("ok");
 
 		ret = of_update_property(np, prop_new);
+		if (ret)
+			kfree(prop_new);
 	} else {
 		struct property *prop = NULL;
 

@@ -451,6 +451,8 @@ static int ssp_parse_dt(struct device *dev, struct ssp_data *data)
 	}
 
 	data->brightness_array = kzalloc(data->brightness_array_len * sizeof(u32), GFP_KERNEL);
+	if (!data->brightness_array)
+		return -ENOMEM;
 	if (of_property_read_u32_array(np, "ssp-brightness-array",
 				       data->brightness_array, data->brightness_array_len)) {
 		pr_err("no brightness array");
@@ -504,6 +506,8 @@ struct ssp_data *ssp_probe(struct device *dev)
 
 	ssp_infof();
 	data = kzalloc(sizeof(struct ssp_data), GFP_KERNEL);
+	if (!data)
+		return ERR_PTR(-ENOMEM);
 
 	data->dev = dev;
 	data->is_probe_done = false;
@@ -588,6 +592,7 @@ err_create_workqueue:
 	mutex_destroy(&data->pending_mutex);
 	mutex_destroy(&data->enable_mutex);
 err_setup:
+	kfree(data->brightness_array);
 	kfree(data);
 	data = ERR_PTR(ret);
 	ssp_errf("probe failed!");
@@ -633,6 +638,7 @@ void ssp_remove(struct ssp_data *data)
 #endif
 	ssp_infof("done");
 exit:
+	kfree(data->brightness_array);
 	kfree(data);
 }
 

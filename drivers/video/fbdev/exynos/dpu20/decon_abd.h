@@ -204,6 +204,7 @@ extern int decon_abd_pin_enable(struct abd_protect *abd, unsigned int gpio, bool
 extern int decon_abd_pin_register_handler(struct abd_protect *abd, int irq, irq_handler_t handler, void *dev_id);
 extern int decon_abd_pin_unregister_handler(struct abd_protect *abd, int irq, irq_handler_t handler, void *dev_id);
 extern int decon_abd_con_register(struct abd_protect *abd);
+extern void decon_abd_unregister(struct abd_protect *abd);
 extern struct device *find_lcd_class_device(void);
 extern struct platform_device *of_find_abd_dt_parent_platform_device(void);
 extern struct platform_device *of_find_abd_container_platform_device(void);

@@ -149,7 +149,7 @@ static void sec_multicmd(const char *cmd)
 	unsigned long multicmd_value = 0;
 	int i, cnt = 0;
 
-	strcpy(copy_cmd, cmd);
+	strlcpy(copy_cmd, cmd, sizeof(copy_cmd));
 	multicmd_ptr = sec_strtok(copy_cmd, ":");
 	while (multicmd_ptr != NULL) {
 		if (cnt >= MULTICMD_CNT_MAX)

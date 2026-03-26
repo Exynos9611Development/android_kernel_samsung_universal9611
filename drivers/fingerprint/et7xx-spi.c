@@ -571,11 +571,11 @@ int et7xx_platformInit(struct et7xx_data *etspi)
 			pr_err("gpio_requset et7xx_sleep failed\n");
 			goto et7xx_platformInit_sleep_failed;
 		}
-		gpio_direction_output(etspi->sleepPin, 0);
+		retval = gpio_direction_output(etspi->sleepPin, 0);
 		if (retval < 0) {
 			pr_err("gpio_direction_output SLEEP failed\n");
 			retval = -EBUSY;
-			goto et7xx_platformInit_sleep_failed;
+			goto et7xx_platformInit_sleep_dir_failed;
 		}
 
 		if (etspi->sleepPin)
@@ -595,9 +595,9 @@ int et7xx_platformInit(struct et7xx_data *etspi)
 	pr_info("successful status=%d\n", retval);
 	return retval;
 
+et7xx_platformInit_sleep_dir_failed:
+	gpio_free(etspi->sleepPin);
 et7xx_platformInit_sleep_failed:
-	if (etspi->sleepPin)
-		gpio_free(etspi->sleepPin);
 	if (etspi->ldo_pin)
 		gpio_free(etspi->ldo_pin);
 et7xx_platformInit_ldo_failed:

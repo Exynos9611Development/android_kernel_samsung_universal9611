@@ -41,6 +41,10 @@ int sec_bat_parse_dt(struct device *dev,
 		pdata->charging_current =
 			kzalloc(sizeof(sec_charging_current_t) * SEC_BATTERY_CABLE_MAX,
 				GFP_KERNEL);
+		if (!pdata->charging_current) {
+			pr_err("%s: failed to allocate charging_current\n", __func__);
+			return -ENOMEM;
+		}
 
 		for (i = 0; i < SEC_BATTERY_CABLE_MAX; i++) {
 			pdata->charging_current[i].input_current_limit = (unsigned int)input_current;
@@ -196,6 +200,11 @@ int sec_bat_parse_dt(struct device *dev,
 
 	len = len / sizeof(u32);
 	pdata->polling_time = kzalloc(sizeof(*pdata->polling_time) * len, GFP_KERNEL);
+	if (!pdata->polling_time) {
+		pr_err("%s: failed to allocate polling_time\n", __func__);
+		kfree(pdata->charging_current);
+		return -ENOMEM;
+	}
 	ret = of_property_read_u32_array(np, "battery,polling_time",
 					 pdata->polling_time, len);
 	if (ret)
@@ -1613,6 +1622,24 @@ int sec_bat_parse_dt(struct device *dev,
 #if defined(CONFIG_BATTERY_CISD)
 	p = of_get_property(np, "battery,ignore_cisd_index", &len);
 	pdata->ignore_cisd_index = kzalloc(sizeof(*pdata->ignore_cisd_index) * 2, GFP_KERNEL);
+	if (!pdata->ignore_cisd_index) {
+		pr_err("%s: failed to allocate ignore_cisd_index\n", __func__);
+		kfree(pdata->charging_current);
+		kfree(pdata->polling_time);
+		kfree(pdata->temp_adc_table);
+		kfree(pdata->temp_amb_adc_table);
+		kfree(pdata->usb_temp_adc_table);
+		kfree(pdata->chg_temp_adc_table);
+		kfree(pdata->dchg_temp_adc_table);
+		kfree(pdata->wpc_temp_adc_table);
+		kfree(pdata->sub_bat_temp_adc_table);
+		kfree(pdata->slave_chg_temp_adc_table);
+		kfree(pdata->blkt_temp_adc_table);
+		kfree(pdata->inbat_adc_table);
+		kfree(pdata->age_data);
+		kfree(pdata->health_condition);
+		return -ENOMEM;
+	}
 	if (p) {
 		len = len / sizeof(u32);
 		ret = of_property_read_u32_array(np, "battery,ignore_cisd_index",
@@ -1623,6 +1650,25 @@ int sec_bat_parse_dt(struct device *dev,
 
 	p = of_get_property(np, "battery,ignore_cisd_index_d", &len);
 	pdata->ignore_cisd_index_d = kzalloc(sizeof(*pdata->ignore_cisd_index_d) * 2, GFP_KERNEL);
+	if (!pdata->ignore_cisd_index_d) {
+		pr_err("%s: failed to allocate ignore_cisd_index_d\n", __func__);
+		kfree(pdata->ignore_cisd_index);
+		kfree(pdata->charging_current);
+		kfree(pdata->polling_time);
+		kfree(pdata->temp_adc_table);
+		kfree(pdata->temp_amb_adc_table);
+		kfree(pdata->usb_temp_adc_table);
+		kfree(pdata->chg_temp_adc_table);
+		kfree(pdata->dchg_temp_adc_table);
+		kfree(pdata->wpc_temp_adc_table);
+		kfree(pdata->sub_bat_temp_adc_table);
+		kfree(pdata->slave_chg_temp_adc_table);
+		kfree(pdata->blkt_temp_adc_table);
+		kfree(pdata->inbat_adc_table);
+		kfree(pdata->age_data);
+		kfree(pdata->health_condition);
+		return -ENOMEM;
+	}
 	if (p) {
 		len = len / sizeof(u32);
 		ret = of_property_read_u32_array(np, "battery,ignore_cisd_index_d",

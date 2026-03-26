@@ -35,7 +35,7 @@ void write_ssp_dump_file(struct ssp_data *data, char *dump, int dumpsize, int ty
 	if (dump == NULL) {
 		ssp_errf("dump is NULL");
 		return;
-	} else if (PTR_ERR_OR_ZERO(sensorhub_dump)) {
+	} else if (!sensorhub_dump) {
 		ssp_errf("dump ptr error");
 		return;
 	} else if (dumpsize != sensorhub_dump_size) {
@@ -74,8 +74,8 @@ void initialize_ssp_dump(struct ssp_data *data)
 		return;
 
 	sensorhub_dump = (char*)kvzalloc(sensorhub_dump_size, GFP_KERNEL);
-	if(PTR_ERR_OR_ZERO(sensorhub_dump)) {
-		ssp_infof("memory alloc failed");
+	if (!sensorhub_dump) {
+		ssp_errf("memory alloc failed");
 		return;
 	}
 
@@ -103,10 +103,10 @@ void initialize_ssp_dump(struct ssp_data *data)
 void remove_ssp_dump(struct ssp_data *data)
 {
 	int i;
-	if(!PTR_ERR_OR_ZERO(sensorhub_dump)) {
+	if (sensorhub_dump) {
 		kvfree(sensorhub_dump);
 
-		for (i = 0; ARRAY_SIZE(ssp_dump_bin_attrs); i++) {
+		for (i = 0; i < ARRAY_SIZE(ssp_dump_bin_attrs); i++) {
 			device_remove_bin_file(data->mcu_device, ssp_dump_bin_attrs[i]);
 		}
 	}

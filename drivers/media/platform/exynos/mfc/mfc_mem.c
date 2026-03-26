@@ -238,26 +238,26 @@ int mfc_bufcon_get_daddr(struct mfc_ctx *ctx, struct mfc_buf *mfc_buf,
 		}
 
 		mfc_buf->dmabufs[j][plane] = dmabuf_container_get_buffer(bufcon_dmabuf, i);
-		if (IS_ERR(mfc_buf->dmabufs[i][plane])) {
+		if (IS_ERR(mfc_buf->dmabufs[j][plane])) {
 			mfc_err_ctx("[BUFCON] Failed to get dma_buf (err %ld)",
-					PTR_ERR(mfc_buf->dmabufs[i][plane]));
+					PTR_ERR(mfc_buf->dmabufs[j][plane]));
 			call_dop(dev, dump_and_stop_debug_mode, dev);
 			goto err_get_daddr;
 		}
 
-		mfc_buf->attachments[j][plane] = dma_buf_attach(mfc_buf->dmabufs[i][plane], dev->device);
-		if (IS_ERR(mfc_buf->attachments[i][plane])) {
+		mfc_buf->attachments[j][plane] = dma_buf_attach(mfc_buf->dmabufs[j][plane], dev->device);
+		if (IS_ERR(mfc_buf->attachments[j][plane])) {
 			mfc_err_ctx("[BUFCON] Failed to get dma_buf_attach (err %ld)",
-					PTR_ERR(mfc_buf->attachments[i][plane]));
+					PTR_ERR(mfc_buf->attachments[j][plane]));
 			call_dop(dev, dump_and_stop_debug_mode, dev);
 			goto err_get_daddr;
 		}
 
-		mfc_buf->addr[j][plane] = ion_iovmm_map(mfc_buf->attachments[i][plane], 0,
+		mfc_buf->addr[j][plane] = ion_iovmm_map(mfc_buf->attachments[j][plane], 0,
 				raw->plane_size[plane], DMA_BIDIRECTIONAL, 0);
-		if (IS_ERR_VALUE(mfc_buf->addr[i][plane])) {
+		if (IS_ERR_VALUE(mfc_buf->addr[j][plane])) {
 			mfc_err_ctx("[BUFCON] Failed to allocate iova (err %pa)",
-					&mfc_buf->addr[i][plane]);
+					&mfc_buf->addr[j][plane]);
 			call_dop(dev, dump_and_stop_debug_mode, dev);
 			goto err_get_daddr;
 		}

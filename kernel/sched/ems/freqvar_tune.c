@@ -327,6 +327,7 @@ static int freqvar_boost_init(struct device_node *dn, const struct cpumask *mask
 	if (ret)
 		goto fail_init;
 
+	cpufreq_cpu_put(policy);
 	return 0;
 
 fail_init:
@@ -460,6 +461,7 @@ static int freqvar_rate_limit_init(struct device_node *dn, const struct cpumask 
 
 	freqvar_rate_limit_update(policy->cpu, policy->cur);
 
+	cpufreq_cpu_put(policy);
 	return 0;
 
 fail_init:
@@ -568,6 +570,7 @@ static int freqvar_upscale_ratio_init(struct device_node *dn, const struct cpuma
 	if (ret)
 		goto fail_init;
 
+	cpufreq_cpu_put(policy);
 	return 0;
 
 fail_init:

@@ -6115,6 +6115,7 @@ static int samsung_abox_probe(struct platform_device *pdev)
 			WQ_MEM_RECLAIM);
 	if (!data->ipc_workqueue) {
 		dev_err(dev, "Couldn't create workqueue %s\n", "abox_ipc");
+		destroy_workqueue(data->gear_workqueue);
 		return -ENOMEM;
 	}
 
@@ -6271,8 +6272,10 @@ static int samsung_abox_probe(struct platform_device *pdev)
 	pdev_tmp = of_find_device_by_node(np_tmp);
 	if (!pdev_tmp) {
 		dev_err(dev, "Failed to get abox_gic platform device\n");
+		of_node_put(np_tmp);
 		return -EPROBE_DEFER;
 	}
+	of_node_put(np_tmp);
 	data->dev_gic = &pdev_tmp->dev;
 
 	data->bootargs_offset = 0;
@@ -6303,8 +6306,10 @@ static int samsung_abox_probe(struct platform_device *pdev)
 		data->pdev_vts = of_find_device_by_node(np_tmp);
 		if (!data->pdev_vts) {
 			dev_err(dev, "Failed to get vts platform device\n");
+			of_node_put(np_tmp);
 			return -EPROBE_DEFER;
 		}
+		of_node_put(np_tmp);
 	}
 
 #ifdef EMULATOR
@@ -6400,6 +6405,7 @@ static int samsung_abox_remove(struct platform_device *pdev)
 	abox_runtime_suspend(dev);
 #endif
 	device_init_wakeup(dev, false);
+	destroy_workqueue(data->gear_workqueue);
 	destroy_workqueue(data->ipc_workqueue);
 	pm_qos_remove_request(&abox_pm_qos_aud);
 	pm_qos_remove_request(&abox_pm_qos_int);

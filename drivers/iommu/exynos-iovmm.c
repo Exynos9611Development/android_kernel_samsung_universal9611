@@ -807,6 +807,7 @@ struct exynos_iovmm *exynos_create_single_iovmm(const char *name,
 err_init_event_log:
 	iommu_domain_free(vmm->domain);
 err_setup_domain:
+	kfree(vmm->vm_map);
 	kfree(vmm);
 err_alloc_vmm:
 	pr_err("%s IOVMM: Failed to create IOVMM (%d)\n", name, ret);

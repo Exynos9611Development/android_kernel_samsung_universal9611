@@ -209,7 +209,7 @@ static int __init lbt_sysfs_init(void)
 		scnprintf(buf, sizeof(buf), "overutil_ratio_level%d", i);
 		name = kstrdup(buf, GFP_KERNEL);
 		if (!name)
-			goto out;
+			goto out_free_names;
 
 		lbt_attr_init(lbt_kattrs[i], name, 0644,
 				show_overutil_ratio, store_overutil_ratio);
@@ -220,14 +220,27 @@ static int __init lbt_sysfs_init(void)
 
 	lbt_kobj = kobject_create_and_add("lbt", ems_kobj);
 	if (!lbt_kobj)
-		goto out;
+		goto out_free_names;
 
 	if (sysfs_create_group(lbt_kobj, &lbt_group))
-		goto out;
+		goto out_free_names;
 
 	return 0;
 
+out_free_names:
+	for (i = 0; i <= depth; i++) {
+		if (lbt_kattrs && lbt_kattrs[i].attr.name) {
+			kfree(lbt_kattrs[i].attr.name);
+			lbt_kattrs[i].attr.name = NULL;
+		}
+	}
 out:
+	if (lbt_kattrs) {
+		for (i = 0; i <= depth; i++) {
+			if (lbt_kattrs[i].attr.name)
+				kfree(lbt_kattrs[i].attr.name);
+		}
+	}
 	kfree(lbt_attrs);
 	kfree(lbt_kattrs);
 

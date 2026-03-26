@@ -571,7 +571,8 @@ static int exynos_hiu_probe(struct platform_device *pdev)
 	ret = hiu_dt_parsing(dn);
 	if (ret) {
 		dev_err(&pdev->dev, "Failed to parse HIU data\n");
-		return -ENODEV;
+		ret = -ENODEV;
+		goto free_data;
 	}
 
 	data->dn = dn;
@@ -580,14 +581,16 @@ static int exynos_hiu_probe(struct platform_device *pdev)
 		data->irq = irq_of_parse_and_map(dn, 0);
 		if (data->irq <= 0) {
 			dev_err(&pdev->dev, "Failed to get IRQ\n");
-			return -ENODEV;
+			ret = -ENODEV;
+			goto free_data;
 		}
 
 		ret = devm_request_irq(&pdev->dev, data->irq, exynos_hiu_irq_handler,
 				IRQF_TRIGGER_RISING, dev_name(&pdev->dev), data);
 		if (ret) {
 			dev_err(&pdev->dev, "Failed to request IRQ handler: %d\n", data->irq);
-			return -ENODEV;
+			ret = -ENODEV;
+			goto free_data;
 		}
 	}
 
@@ -601,6 +604,12 @@ static int exynos_hiu_probe(struct platform_device *pdev)
 
 	dev_info(&pdev->dev, "HIU Handler initialization complete\n");
 	return 0;
+
+free_data:
+	iounmap(data->base);
+	kfree(data);
+	data = NULL;
+	return ret;
 }
 
 static int exynos_hiu_suspend(struct platform_device *pdev, pm_message_t state)

@@ -508,17 +508,22 @@ static int __init init_sched_energy_data(void)
 		cpu_phandle = of_parse_phandle(cpu_node, "sched-energy-data", 0);
 		if (!cpu_phandle) {
 			pr_warn("CPU device node has no sched-energy-data\n");
+			of_node_put(cpu_node);
 			return -ENODATA;
 		}
 
 		table = &per_cpu(energy_table, cpu);
 		if (of_property_read_u32(cpu_phandle, "capacity-mips", &table->mips)) {
 			pr_warn("No capacity-mips data\n");
+			of_node_put(cpu_phandle);
+			of_node_put(cpu_node);
 			return -ENODATA;
 		}
 
 		if (of_property_read_u32(cpu_phandle, "power-coefficient", &table->coefficient)) {
 			pr_warn("No power-coefficient data\n");
+			of_node_put(cpu_phandle);
+			of_node_put(cpu_node);
 			return -ENODATA;
 		}
 

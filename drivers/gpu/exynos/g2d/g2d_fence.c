@@ -277,7 +277,7 @@ bool g2d_task_has_error_fence(struct g2d_task *task)
 
 	for (i = 0; i < task->num_source; i++)
 		if (g2d_fence_has_error(&task->source[i], i))
-			return false;
+			return true;
 
 	if (g2d_fence_has_error(&task->target, -1))
 		return true;

@@ -542,8 +542,10 @@ static int __init init_ufc_table_dt(struct exynos_cpufreq_domain *domain,
 			return -ENOMEM;
 
 		ret = of_property_read_u32_array(child, "table", (unsigned int *)table, size);
-		if (ret)
+		if (ret) {
+			kfree(table);
 			return -EINVAL;
+		}
 
 		pr_info("Register UFC Type-%d for Domain %d \n",ufc->info.ctrl_type, domain->id);
 		for (index = 0; index < domain->table_size; index++) {

@@ -848,6 +848,10 @@ static int __init fimc_is_lib_mem_map(void)
 
 	page_size = fimc_is_lib_vm.size / PAGE_SIZE;
 	pages = kzalloc(sizeof(struct page*) * page_size, GFP_KERNEL);
+	if (!pages) {
+		probe_err("failed to allocate pages array");
+		return -ENOMEM;
+	}
 	page = phys_to_page(fimc_is_lib_vm.phys_addr);
 
 	for (i = 0; i < page_size; i++)
@@ -866,7 +870,8 @@ static int __init fimc_is_lib_mem_map(void)
 }
 
 static int __init fimc_is_heap_mem_map(struct fimc_is_resourcemgr *resourcemgr,
-	struct vm_struct *vm, int heap_size)
+	struct vm_struct *vm, int heap_size,
+	struct fimc_is_priv_buf **pb_out)
 {
 	struct fimc_is_mem *mem = &resourcemgr->mem;
 	struct fimc_is_priv_buf *pb;
@@ -905,6 +910,7 @@ static int __init fimc_is_heap_mem_map(struct fimc_is_resourcemgr *resourcemgr,
 	}
 
 	vfree(pages);
+	*pb_out = pb;
 
 	return 0;
 }
@@ -1320,13 +1326,15 @@ int __init fimc_is_resourcemgr_probe(struct fimc_is_resourcemgr *resourcemgr,
 		goto p_err;
 	}
 
-	ret = fimc_is_heap_mem_map(resourcemgr, &fimc_is_heap_vm, HEAP_SIZE);
+	ret = fimc_is_heap_mem_map(resourcemgr, &fimc_is_heap_vm, HEAP_SIZE,
+				   &resourcemgr->pb_heap);
 	if (ret) {
 		probe_err("fimc_is_heap_mem_map for HEAP_DDK is fail(%d)", ret);
 		goto p_err;
 	}
 
-	ret = fimc_is_heap_mem_map(resourcemgr, &fimc_is_heap_rta_vm, HEAP_RTA_SIZE);
+	ret = fimc_is_heap_mem_map(resourcemgr, &fimc_is_heap_rta_vm, HEAP_RTA_SIZE,
+				   &resourcemgr->pb_heap_rta);
 	if (ret) {
 		probe_err("fimc_is_heap_mem_map for HEAP_RTA is fail(%d)", ret);
 		goto p_err;

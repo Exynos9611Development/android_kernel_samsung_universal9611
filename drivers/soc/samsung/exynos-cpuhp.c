@@ -147,7 +147,7 @@ int exynos_cpuhp_register(char *name, struct cpumask mask, int type)
 
 	/* init new user's information */
 	cpumask_copy(&user->online_cpus, &mask);
-	strcpy(user->name, name);
+	strlcpy(user->name, name, CPUHP_USER_NAME_LEN);
 	user->type = type;
 	/* register user list */
 	list_add(&user->list, &cpuhp.users);

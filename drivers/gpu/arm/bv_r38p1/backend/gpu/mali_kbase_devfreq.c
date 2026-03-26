@@ -412,14 +412,18 @@ static int kbase_devfreq_init_core_mask_table(struct kbase_device *kbdev)
 
 	if (!opp_node)
 		return 0;
-	if (!of_device_is_compatible(opp_node, "operating-points-v2-mali"))
+	if (!of_device_is_compatible(opp_node, "operating-points-v2-mali")) {
+		of_node_put(opp_node);
 		return 0;
+	}
 
 	count = dev_pm_opp_get_opp_count(kbdev->dev);
 	kbdev->devfreq_table = kmalloc_array(count,
 			sizeof(struct kbase_devfreq_opp), GFP_KERNEL);
-	if (!kbdev->devfreq_table)
+	if (!kbdev->devfreq_table) {
+		of_node_put(opp_node);
 		return -ENOMEM;
+	}
 
 	for_each_available_child_of_node(opp_node, node) {
 		const void *core_count_p;
@@ -486,6 +490,8 @@ static int kbase_devfreq_init_core_mask_table(struct kbase_device *kbdev)
 
 				if (!core) {
 					dev_err(kbdev->dev, "OPP has more cores than GPU\n");
+					of_node_put(node);
+					of_node_put(opp_node);
 					return -ENODEV;
 				}
 
@@ -496,6 +502,8 @@ static int kbase_devfreq_init_core_mask_table(struct kbase_device *kbdev)
 
 		if (!core_mask) {
 			dev_err(kbdev->dev, "OPP has invalid core mask of 0\n");
+			of_node_put(node);
+			of_node_put(opp_node);
 			return -ENODEV;
 		}
 
@@ -526,6 +534,7 @@ static int kbase_devfreq_init_core_mask_table(struct kbase_device *kbdev)
 
 	kbdev->num_opps = i;
 
+	of_node_put(opp_node);
 	return 0;
 #endif /* CONFIG_OF */
 }

@@ -748,6 +748,8 @@ static int __init slsi_kic_init(void)
 
 err_out:
 	genl_unregister_family(&slsi_kic_fam);
+	kfree(pdata);
+	pdata = NULL;
 	mutex_unlock(&kic_lock);
 	SCSC_TAG_ERR(KIC_COMMON, "%s Exit - err %d\n", __func__, err);
 	return err;

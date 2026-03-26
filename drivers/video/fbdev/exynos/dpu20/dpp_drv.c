@@ -921,7 +921,6 @@ static int dpp_probe(struct platform_device *pdev)
 	return 0;
 
 err_clk:
-	kfree(dpp);
 err:
 	return ret;
 }

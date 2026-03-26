@@ -3859,6 +3859,8 @@ struct link_device *shmem_create_link_device(struct platform_device *pdev)
 	return ld;
 
 error:
+	if (ld->rx_wq)
+		destroy_workqueue(ld->rx_wq);
 	shm_release_regions();
 
 	kfree(mld);

@@ -705,6 +705,7 @@ static struct avc_node *avc_insert(struct selinux_avc *avc,
 		rc = avc_xperms_populate(node, xp_node);
 		if (rc) {
 			kmem_cache_free(avc_node_cachep, node);
+			atomic_dec(&avc->avc_cache.active_nodes);
 			return NULL;
 		}
 		head = &avc->avc_cache.slots[hvalue];

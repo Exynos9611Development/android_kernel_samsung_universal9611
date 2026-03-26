@@ -51,9 +51,11 @@ static int store_sensor_dump(struct ssp_data *data, int sensor_type, u16 length,
 
 	/*make file contents*/
 	contents = (char *)kzalloc(dump_len, GFP_KERNEL);
+	if (!contents)
+		return -ENOMEM;
 
 	for (i = 0; i < length; i++) {
-		tmp_ch = ((i % NUM_LINE_ITEM == NUM_LINE_ITEM - 1) || (i - 1 == length)) ? '\n' : ' ';
+		tmp_ch = ((i % NUM_LINE_ITEM == NUM_LINE_ITEM - 1) || (i + 1 == length)) ? '\n' : ' ';
 		snprintf(contents + i * LENGTH_1BYTE_HEXA_WITH_BLANK, dump_len - i * LENGTH_1BYTE_HEXA_WITH_BLANK,
 		         "%02x%c", buf[i], tmp_ch);
 	}

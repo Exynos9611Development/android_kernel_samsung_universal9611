@@ -255,8 +255,10 @@ static int samsung_abox_effect_probe(struct platform_device *pdev)
 	data->pdev_abox = of_find_device_by_node(np_tmp);
 	if (!data->pdev_abox) {
 		dev_err(dev, "Failed to get abox platform device\n");
+		of_node_put(np_tmp);
 		return -EPROBE_DEFER;
 	}
+	of_node_put(np_tmp);
 
 	data->pdev = pdev;
 

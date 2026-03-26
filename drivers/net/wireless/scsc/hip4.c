@@ -1288,6 +1288,10 @@ static void hip4_wq_ctrl(struct work_struct *data)
 #endif
 		mem = scsc_mx_service_mif_addr_to_ptr(service, ref);
 		m = (struct mbulk *)(mem);
+		if (!m) {
+			SLSI_ERR_NODEV("Ctrl: Mbulk is NULL 0x%x\n", ref);
+			goto consume_ctl_mbulk;
+		}
 		/* Process Control Signal */
 		skb = hip4_mbulk_to_skb(service, hip_priv, m, to_free, false);
 		if (!skb) {
@@ -2330,30 +2334,42 @@ int hip4_init(struct slsi_hip4 *hip)
 			     hip_ptr + HIP4_WLAN_TX_DAT_OFFSET + HIP4_WLAN_TX_DAT_SIZE,
 			     (HIP4_WLAN_TX_DAT_SIZE / HIP4_DAT_SLOTS) - sizeof(struct mbulk), 5,
 			     hip->hip_priv->minor);
-	if (ret)
+	if (ret) {
+		kfree(hip->hip_priv);
+		hip->hip_priv = NULL;
 		return ret;
+	}
 
 	/* Configure mbulk allocator - Control QUEUES */
 	ret = mbulk_pool_add(MBULK_POOL_ID_CTRL, hip_ptr + HIP4_WLAN_TX_CTL_OFFSET,
 			     hip_ptr + HIP4_WLAN_TX_CTL_OFFSET + HIP4_WLAN_TX_CTL_SIZE,
 			     (HIP4_WLAN_TX_CTL_SIZE / HIP4_CTL_SLOTS) - sizeof(struct mbulk), 0,
 			     hip->hip_priv->minor);
-	if (ret)
+	if (ret) {
+		kfree(hip->hip_priv);
+		hip->hip_priv = NULL;
 		return ret;
+	}
 #else
 	/* Configure mbulk allocator - Data QUEUES */
 	ret = mbulk_pool_add(MBULK_POOL_ID_DATA, hip_ptr + HIP4_WLAN_TX_DAT_OFFSET,
 			     hip_ptr + HIP4_WLAN_TX_DAT_OFFSET + HIP4_WLAN_TX_DAT_SIZE,
 			     (HIP4_WLAN_TX_DAT_SIZE / HIP4_DAT_SLOTS) - sizeof(struct mbulk), 5);
-	if (ret)
+	if (ret) {
+		kfree(hip->hip_priv);
+		hip->hip_priv = NULL;
 		return ret;
+	}
 
 	/* Configure mbulk allocator - Control QUEUES */
 	ret = mbulk_pool_add(MBULK_POOL_ID_CTRL, hip_ptr + HIP4_WLAN_TX_CTL_OFFSET,
 			     hip_ptr + HIP4_WLAN_TX_CTL_OFFSET + HIP4_WLAN_TX_CTL_SIZE,
 			    (HIP4_WLAN_TX_CTL_SIZE / HIP4_CTL_SLOTS) - sizeof(struct mbulk), 0);
-	if (ret)
+	if (ret) {
+		kfree(hip->hip_priv);
+		hip->hip_priv = NULL;
 		return ret;
+	}
 #endif
 
 	/* Reset hip_control table */
@@ -2390,6 +2406,8 @@ int hip4_init(struct slsi_hip4 *hip)
 	if (!dev) {
 		SLSI_ERR(sdev, "netdev No longer exists\n");
 		rcu_read_unlock();
+		kfree(hip->hip_priv);
+		hip->hip_priv = NULL;
 		return -EINVAL;
 	}
 	netif_napi_add(dev, &hip->hip_priv->napi, hip4_napi_poll, NAPI_POLL_WEIGHT);
@@ -2412,8 +2430,11 @@ int hip4_init(struct slsi_hip4 *hip)
 		      HIP4_WLAN_CONFIG_OFFSET);
 
 	/* Initialize scoreboard */
-	if (scsc_mx_service_mif_ptr_to_addr(service, &hip_control->scoreboard, &ref_scoreboard))
+	if (scsc_mx_service_mif_ptr_to_addr(service, &hip_control->scoreboard, &ref_scoreboard)) {
+		kfree(hip->hip_priv);
+		hip->hip_priv = NULL;
 		return -EFAULT;
+	}
 
 	/* Calculate total space used by wlan*.hcf files */
 	for (i = 0, total_mib_len = 0; i < SLSI_WLAN_MAX_MIB_FILE; i++)
@@ -2552,6 +2573,8 @@ int hip4_init(struct slsi_hip4 *hip)
 	hip->hip_priv->hip4_workq = create_singlethread_workqueue("hip4_work");
 	if (!hip->hip_priv->hip4_workq) {
 		SLSI_ERR_NODEV("Error creating singlethread_workqueue\n");
+		kfree(hip->hip_priv);
+		hip->hip_priv = NULL;
 		return -ENOMEM;
 	}
 #ifdef CONFIG_SCSC_WLAN_RX_NAPI

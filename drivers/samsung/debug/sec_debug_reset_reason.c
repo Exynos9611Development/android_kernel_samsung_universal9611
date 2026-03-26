@@ -314,8 +314,8 @@ static void handle_bug_string(char *buf, char *src)
 	int idx = 0, len, i;
 
 	len = strlen(src);
-	if (BBP_STR_LEN < len)
-		len = BBP_STR_LEN;
+	if (BBP_STR_LEN - 1 < len)
+		len = BBP_STR_LEN - 1;
 
 	for (i = 0; i < len; i++) {
 		if (src[i] == '/')
@@ -326,6 +326,7 @@ static void handle_bug_string(char *buf, char *src)
 		strncpy(buf, &(src[idx + 1]), len - idx);
 	else
 		strncpy(buf, src, len);
+	buf[len] = '\0';
 }
 
 static void handle_bus_string(char *buf, char *src)
@@ -333,8 +334,8 @@ static void handle_bus_string(char *buf, char *src)
 	int idx = 0, len, max = 2, cnt = 0, i;
 
 	len = strlen(src);
-	if (BBP_STR_LEN < len)
-		len = BBP_STR_LEN;
+	if (BBP_STR_LEN - 1 < len)
+		len = BBP_STR_LEN - 1;
 
 	for (i = 0; i < len; i++) {
 		if (src[i] == '/') {
@@ -351,6 +352,7 @@ out:
 		strncpy(buf, src, idx);
 	else
 		strncpy(buf, src, len);
+	buf[len] = '\0';
 }
 
 enum pnc_str {

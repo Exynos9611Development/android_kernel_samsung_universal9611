@@ -141,8 +141,10 @@ static int __init init_util_sysfs(void)
 	if (!kobj)
 		return -EINVAL;
 
-	if (sysfs_create_group(kobj, &attr_group))
+	if (sysfs_create_group(kobj, &attr_group)) {
+		kobject_put(kobj);
 		return -EINVAL;
+	}
 
 	return 0;
 }

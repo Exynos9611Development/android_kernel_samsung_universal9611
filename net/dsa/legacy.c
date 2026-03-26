@@ -377,9 +377,12 @@ static int dsa_of_probe_links(struct dsa_platform_data *pd,
 		if (!strcmp(port_name, "dsa") && pd->nr_chips > 1) {
 			ret = dsa_of_setup_routing_table(pd, cd, chip_index,
 							 port_index, link);
-			if (ret)
+			if (ret) {
+				of_node_put(link);
 				return ret;
+			}
 		}
+		of_node_put(link);
 	}
 	return 0;
 }
@@ -406,7 +409,7 @@ static void dsa_of_free_platform_data(struct dsa_platform_data *pd)
 static int dsa_of_probe(struct device *dev)
 {
 	struct device_node *np = dev->of_node;
-	struct device_node *child, *mdio, *ethernet, *port;
+	struct device_node *child, *mdio, *ethernet, *port, *mdio_child;
 	struct mii_bus *mdio_bus, *mdio_bus_switch;
 	struct net_device *ethernet_dev;
 	struct dsa_platform_data *pd;
@@ -422,8 +425,10 @@ static int dsa_of_probe(struct device *dev)
 		return -EINVAL;
 
 	mdio_bus = of_mdio_find_bus(mdio);
-	if (!mdio_bus)
+	if (!mdio_bus) {
+		of_node_put(mdio);
 		return -EPROBE_DEFER;
+	}
 
 	ethernet = of_parse_phandle(np, "dsa,ethernet", 0);
 	if (!ethernet) {
@@ -434,7 +439,7 @@ static int dsa_of_probe(struct device *dev)
 	ethernet_dev = of_find_net_device_by_node(ethernet);
 	if (!ethernet_dev) {
 		ret = -EPROBE_DEFER;
-		goto out_put_mdio;
+		goto out_put_node;
 	}
 
 	pd = kzalloc(sizeof(*pd), GFP_KERNEL);
@@ -483,11 +488,12 @@ static int dsa_of_probe(struct device *dev)
 		if (!of_property_read_u32(child, "eeprom-length", &eeprom_len))
 			cd->eeprom_len = eeprom_len;
 
-		mdio = of_parse_phandle(child, "mii-bus", 0);
-		if (mdio) {
-			mdio_bus_switch = of_mdio_find_bus(mdio);
+		mdio_child = of_parse_phandle(child, "mii-bus", 0);
+		if (mdio_child) {
+			mdio_bus_switch = of_mdio_find_bus(mdio_child);
 			if (!mdio_bus_switch) {
 				ret = -EPROBE_DEFER;
+				of_node_put(mdio_child);
 				goto out_free_chip;
 			}
 
@@ -497,6 +503,7 @@ static int dsa_of_probe(struct device *dev)
 			 */
 			put_device(cd->host_dev);
 			cd->host_dev = &mdio_bus_switch->dev;
+			of_node_put(mdio_child);
 		}
 
 		for_each_available_child_of_node(child, port) {
@@ -532,6 +539,8 @@ static int dsa_of_probe(struct device *dev)
 	/* The individual chips hold their own refcount on the mdio bus,
 	 * so drop ours */
 	put_device(&mdio_bus->dev);
+	of_node_put(mdio);
+	of_node_put(ethernet);
 
 	return 0;
 
@@ -542,8 +551,11 @@ out_free:
 	dev->platform_data = NULL;
 out_put_ethernet:
 	put_device(&ethernet_dev->dev);
+out_put_node:
+	of_node_put(ethernet);
 out_put_mdio:
 	put_device(&mdio_bus->dev);
+	of_node_put(mdio);
 	return ret;
 }
 

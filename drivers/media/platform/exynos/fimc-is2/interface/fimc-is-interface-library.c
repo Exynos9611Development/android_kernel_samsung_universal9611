@@ -296,6 +296,60 @@ static void print_tracks_status(const char *lvl, const char *str, int status)
 	}
 }
 
+static void free_alloc_tracked_blocks(void)
+{
+	struct fimc_is_lib_support *lib = &gPtr_lib_support;
+	struct lib_mem_tracks *tracks;
+	struct lib_mem_track *track;
+	void **addrs;
+	unsigned long flag;
+	int count = 0, max = 0, i;
+
+	spin_lock_irqsave(&lib->slock_mem_track, flag);
+	list_for_each_entry(tracks, &lib->list_of_tracks, list)
+		max += tracks->num_of_track;
+	spin_unlock_irqrestore(&lib->slock_mem_track, flag);
+
+	if (!max)
+		return;
+
+	addrs = kmalloc_array(max, sizeof(void *), GFP_KERNEL);
+	if (!addrs) {
+		err_lib("failed to alloc buffer for leaked block cleanup\n");
+		return;
+	}
+
+	/* Collect addresses under lock and mark tracks as freed */
+	spin_lock_irqsave(&lib->slock_mem_track, flag);
+	list_for_each_entry(tracks, &lib->list_of_tracks, list) {
+		for (i = 0; i < tracks->num_of_track && count < max; i++) {
+			track = &tracks->track[i];
+
+			if (track->status != MT_STATUS_ALLOC)
+				continue;
+
+			switch (track->type) {
+			case MT_TYPE_SEMA:
+			case MT_TYPE_MUTEX:
+			case MT_TYPE_TIMER:
+			case MT_TYPE_SPINLOCK:
+				track->status = MT_STATUS_FREE;
+				addrs[count++] = (void *)track->addr;
+				break;
+			default:
+				break;
+			}
+		}
+	}
+	spin_unlock_irqrestore(&lib->slock_mem_track, flag);
+
+	/* Free outside the lock */
+	for (i = 0; i < count; i++)
+		vfree(addrs[i]);
+
+	kfree(addrs);
+}
+
 static void free_tracks(void)
 {
 	struct fimc_is_lib_support *lib = &gPtr_lib_support;
@@ -1812,6 +1866,7 @@ void check_lib_memory_leak(void)
 {
 #ifdef LIB_MEM_TRACK
 	print_tracks_status(KERN_ERR, "Leaked memory -", MT_STATUS_ALLOC);
+	free_alloc_tracked_blocks();
 	free_tracks();
 #endif
 }
@@ -2421,14 +2476,14 @@ int fimc_is_load_ddk_bin(int loadType)
 		ret = fimc_is_memory_attribute_nxrw(&memory_attribute[INDEX_ISP_BIN]);
 		if (ret) {
 			err_lib("failed to change into NX memory attribute (%d)", ret);
-			return ret;
+			goto fail;
 		}
 
 #ifdef USE_ONE_BINARY
 		ret = fimc_is_memory_attribute_nxrw(&memory_attribute[INDEX_VRA_BIN]);
 		if (ret) {
 			err_lib("failed to change into NX memory attribute (%d)", ret);
-			return ret;
+			goto fail;
 		}
 #endif
 
@@ -2436,7 +2491,7 @@ int fimc_is_load_ddk_bin(int loadType)
 			ret = fimc_is_memory_attribute_nxrw(&memory_attribute[INDEX_CDH_BIN]);
 			if (ret) {
 				err_lib("failed to change into NX memory attribute (%d)", ret);
-				return ret;
+				goto fail;
 			}
 		}
 
@@ -2474,14 +2529,14 @@ int fimc_is_load_ddk_bin(int loadType)
 		ret = fimc_is_memory_attribute_rox(&memory_attribute[INDEX_ISP_BIN]);
 		if (ret) {
 			err_lib("failed to change into EX memory attribute (%d)", ret);
-			return ret;
+			goto fail;
 		}
 
 #ifdef USE_ONE_BINARY
 		ret = fimc_is_memory_attribute_rox(&memory_attribute[INDEX_VRA_BIN]);
 		if (ret) {
 			err_lib("failed to change into EX memory attribute (%d)", ret);
-			return ret;
+			goto fail;
 		}
 #endif
 
@@ -2489,7 +2544,7 @@ int fimc_is_load_ddk_bin(int loadType)
 			ret = fimc_is_memory_attribute_rox(&memory_attribute[INDEX_CDH_BIN]);
 			if (ret) {
 				err_lib("failed to change into EX memory attribute (%d)", ret);
-				return ret;
+				goto fail;
 			}
 		}
 		cdh_loaded = true;
@@ -2653,7 +2708,7 @@ int fimc_is_load_rta_bin(int loadType)
 		ret = fimc_is_memory_attribute_nxrw(&rta_memory_attribute);
 		if (ret) {
 			err_lib("failed to change into NX memory attribute (%d)", ret);
-			return ret;
+			goto fail;
 		}
 
 		info_lib("binary info[RTA] - type: C/D, from: %s\n",
@@ -2676,7 +2731,7 @@ int fimc_is_load_rta_bin(int loadType)
 		ret = fimc_is_memory_attribute_rox(&rta_memory_attribute);
 		if (ret) {
 			err_lib("failed to change into EX memory attribute (%d)", ret);
-			return ret;
+			goto fail;
 		}
 #endif
 

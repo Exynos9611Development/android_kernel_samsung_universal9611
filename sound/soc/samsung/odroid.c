@@ -159,10 +159,14 @@ static int odroid_audio_probe(struct platform_device *pdev)
 	link->cpu_of_node = of_parse_phandle(cpu, "sound-dai", 0);
 	if (!link->cpu_of_node) {
 		dev_err(dev, "Failed parsing cpu/sound-dai property\n");
+		of_node_put(cpu);
+		of_node_put(codec);
 		return -EINVAL;
 	}
 
 	ret = snd_soc_of_get_dai_link_codecs(dev, codec, link);
+	of_node_put(cpu);
+	of_node_put(codec);
 	if (ret < 0)
 		goto err_put_codec_n;
 

@@ -1272,6 +1272,8 @@ static int exynos_map_dt_data(struct platform_device *pdev)
 				data->num_of_sensors++;
 
 		data->sensor_info = kzalloc(sizeof(struct sensor_info) * data->num_of_sensors, GFP_KERNEL);
+		if (!data->sensor_info)
+			return -ENOMEM;
 	} else {
 		dev_err(&pdev->dev, "failed to get sensors information \n");
 		return -ENODEV;
@@ -1967,6 +1969,7 @@ static int exynos_tmu_probe(struct platform_device *pdev)
 err_thermal:
 	thermal_zone_of_sensor_unregister(&pdev->dev, data->tzd);
 err_sensor:
+	kfree(data->sensor_info);
 	return ret;
 }
 
@@ -1993,6 +1996,8 @@ static int exynos_tmu_remove(struct platform_device *pdev)
 		}
 	}
 	mutex_unlock(&data->lock);
+
+	kfree(data->sensor_info);
 
 	return 0;
 }
