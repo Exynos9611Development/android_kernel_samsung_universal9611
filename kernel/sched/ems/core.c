@@ -91,7 +91,10 @@ void detach_task(struct rq *src_rq, struct rq *dst_rq, struct task_struct *p,
 	double_lock_balance(src_rq, dst_rq);
 	set_task_cpu(p, dst_rq->cpu);
 	double_unlock_balance(src_rq, dst_rq);
-	rq_repin_lock(src_rq, rf);(struct rq *src_rq, struct rq *dst_rq,
+	rq_repin_lock(src_rq, rf);
+}
+
+int detach_one_task(struct rq *src_rq, struct rq *dst_rq,
 		struct task_struct *target, struct rq_flags *rf)
 {
 	struct task_struct *p, *n;
