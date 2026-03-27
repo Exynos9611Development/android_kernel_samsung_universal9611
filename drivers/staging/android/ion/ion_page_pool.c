@@ -182,6 +182,16 @@ struct ion_page_pool *ion_page_pool_create(gfp_t gfp_mask, unsigned int order,
 
 void ion_page_pool_destroy(struct ion_page_pool *pool)
 {
+	struct page *page;
+
+	while (pool->high_count) {
+		page = ion_page_pool_remove(pool, true);
+		ion_page_pool_free_pages(pool, page);
+	}
+	while (pool->low_count) {
+		page = ion_page_pool_remove(pool, false);
+		ion_page_pool_free_pages(pool, page);
+	}
 	kfree(pool);
 }
 
