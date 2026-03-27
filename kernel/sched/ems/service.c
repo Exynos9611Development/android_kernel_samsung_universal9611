@@ -216,8 +216,18 @@ static void __init build_prefer_cpus(void)
 	int index = 0;
 
 	dn = of_find_node_by_name(NULL, "ems");
+	if (!dn)
+		return;
+
 	dn = of_find_node_by_name(dn, "prefer-perf-service");
+	if (!dn)
+		return;
+
 	prefer_perf_service_count = of_get_child_count(dn);
+	if (!prefer_perf_service_count) {
+		of_node_put(dn);
+		return;
+	}
 
 	prefer_perf_services = kcalloc(prefer_perf_service_count,
 				sizeof(struct prefer_perf), GFP_KERNEL);
@@ -250,6 +260,8 @@ static void __init build_prefer_cpus(void)
 		of_property_read_string_array(child, "prefer-cpus", mask, proplen);
 		prefer_perf_services[index].prefer_cpus = kcalloc(proplen,
 						sizeof(struct cpumask), GFP_KERNEL);
+		if (!prefer_perf_services[index].prefer_cpus)
+			goto next;
 
 		for (i = 0; i < proplen; i++)
 			cpulist_parse(mask[i], &prefer_perf_services[index].prefer_cpus[i]);
