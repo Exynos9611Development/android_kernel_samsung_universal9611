@@ -4112,7 +4112,7 @@ static void *kmalloc_large_node(size_t size, gfp_t flags, int node)
 	if (page) {
 		ptr = page_address(page);
 		mod_lruvec_page_state(page, NR_SLAB_UNRECLAIMABLE,
-				      1 << get_order(size));
+				      1 << compound_order(page));
 	}
 
 	return kmalloc_large_node_hook(ptr, size, flags);
