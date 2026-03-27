@@ -543,6 +543,7 @@ struct dma_buf *__ion_alloc(size_t len, unsigned int heap_id_mask,
 	if (IS_ERR(dmabuf)) {
 		perrfn("failed to export dmabuf (err %ld)", -PTR_ERR(dmabuf));
 		_ion_buffer_destroy(buffer);
+		return dmabuf;
 	}
 
 	ion_event_end(ION_EVENT_TYPE_ALLOC, buffer);
