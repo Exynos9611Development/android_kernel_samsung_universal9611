@@ -283,7 +283,7 @@ static int __init init_service(void)
 
 	ret = sysfs_create_file(ems_kobj, &kpp_attr.attr);
 	if (ret)
-		pr_err("%s: faile to create sysfs file\n", __func__);
+		pr_err("%s: failed to create sysfs file\n", __func__);
 
 	return 0;
 }

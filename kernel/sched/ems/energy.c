@@ -29,7 +29,7 @@ struct energy_state {
  */
 struct energy_table {
 	unsigned int mips;
-	unsigned int coefficient;;
+	unsigned int coefficient;
 
 	struct energy_state *states;
 	unsigned int nr_states;
@@ -390,7 +390,7 @@ static struct notifier_block sched_cpufreq_policy_notifier = {
  * Whenever frequency domain is registered, and energy table corresponding to
  * the domain is created. Because cpu in the same frequency domain has the same
  * energy table. Capacity is calculated based on the max frequency of the fastest
- * cpu, so once the frequency domain of the faster cpu is regsitered, capacity
+ * cpu, so once the frequency domain of the faster cpu is registered, capacity
  * is recomputed.
  */
 void init_sched_energy_table(struct cpumask *cpus, int table_size,
@@ -410,12 +410,12 @@ void init_sched_energy_table(struct cpumask *cpus, int table_size,
 	mips = per_cpu(energy_table, cpumask_any(cpus)).mips;
 	for_each_cpu(cpu, cpus) {
 		/*
-		 * All cpus in a frequency domain must have the smae capacity.
+		 * All cpus in a frequency domain must have the same capacity.
 		 * Otherwise, it does not create an energy table because it
 		 * is likely to be a human error.
 		 */
 		if (mips != per_cpu(energy_table, cpu).mips) {
-			pr_warn("cpu%d has different cpacity!!\n", cpu);
+			pr_warn("cpu%d has different capacity!!\n", cpu);
 			return;
 		}
 	}
