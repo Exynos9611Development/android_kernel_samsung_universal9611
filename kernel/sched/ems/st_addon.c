@@ -109,7 +109,7 @@ static int select_idle_cpu(struct task_struct *p)
 		 * Prefer the smallest (most energy-efficient) idle coregroup.
 		 */
 		if (cpu_selected(lowest_idle_util_cpu)) {
-			strcpy(state, "lowest_idle_util");
+			strlcpy(state, "lowest_idle_util", sizeof(state));
 			target_cpu = lowest_idle_util_cpu;
 			break;
 		}
@@ -123,7 +123,7 @@ static int select_idle_cpu(struct task_struct *p)
 	}
 
 	if (!cpu_selected(target_cpu) && cpu_selected(lowest_util_cpu)) {
-		strcpy(state, "lowest_util");
+		strlcpy(state, "lowest_util", sizeof(state));
 		target_cpu = lowest_util_cpu;
 	}
 

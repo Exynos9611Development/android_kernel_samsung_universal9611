@@ -755,7 +755,7 @@ int exynos_wakeup_balance(struct task_struct *p, int prev_cpu, int sd_flag, int 
 
 	target_cpu = select_service_cpu(p);
 	if (cpu_selected(target_cpu)) {
-		strcpy(state, "service");
+		strlcpy(state, "service", sizeof(state));
 		goto out;
 	}
 
@@ -773,7 +773,7 @@ int exynos_wakeup_balance(struct task_struct *p, int prev_cpu, int sd_flag, int 
 	 */
 	target_cpu = ontime_task_wakeup(p, sync);
 	if (cpu_selected(target_cpu)) {
-		strcpy(state, "ontime migration");
+		strlcpy(state, "ontime migration", sizeof(state));
 		goto out;
 	}
 
@@ -789,7 +789,7 @@ int exynos_wakeup_balance(struct task_struct *p, int prev_cpu, int sd_flag, int 
 	 */
 	target_cpu = prefer_perf_cpu(p);
 	if (cpu_selected(target_cpu)) {
-		strcpy(state, "prefer-perf");
+		strlcpy(state, "prefer-perf", sizeof(state));
 		goto out;
 	}
 
@@ -808,7 +808,7 @@ int exynos_wakeup_balance(struct task_struct *p, int prev_cpu, int sd_flag, int 
 	 */
 	target_cpu = band_play_cpu(p);
 	if (cpu_selected(target_cpu)) {
-		strcpy(state, "task band");
+		strlcpy(state, "task band", sizeof(state));
 		goto out;
 	}
 
@@ -828,7 +828,7 @@ int exynos_wakeup_balance(struct task_struct *p, int prev_cpu, int sd_flag, int 
 	 */
 	target_cpu = global_boosting(p);
 	if (cpu_selected(target_cpu)) {
-		strcpy(state, "global boosting");
+		strlcpy(state, "global boosting", sizeof(state));
 		goto out;
 	}
 
@@ -844,7 +844,7 @@ int exynos_wakeup_balance(struct task_struct *p, int prev_cpu, int sd_flag, int 
 	 */
 	target_cpu = prefer_idle_cpu(p);
 	if (cpu_selected(target_cpu)) {
-		strcpy(state, "prefer-idle");
+		strlcpy(state, "prefer-idle", sizeof(state));
 		goto out;
 	}
 
@@ -856,7 +856,7 @@ int exynos_wakeup_balance(struct task_struct *p, int prev_cpu, int sd_flag, int 
 	 */
 	target_cpu = select_energy_cpu(p, prev_cpu, sd_flag, sync);
 	if (cpu_selected(target_cpu)) {
-		strcpy(state, "energy cpu");
+		strlcpy(state, "energy cpu", sizeof(state));
 		goto out;
 	}
 
@@ -869,7 +869,7 @@ int exynos_wakeup_balance(struct task_struct *p, int prev_cpu, int sd_flag, int 
 	 */
 	target_cpu = select_proper_cpu(p, prev_cpu);
 	if (cpu_selected(target_cpu))
-		strcpy(state, "proper cpu");
+		strlcpy(state, "proper cpu", sizeof(state));
 
 out:
 	trace_ems_wakeup_balance(p, target_cpu, state);
