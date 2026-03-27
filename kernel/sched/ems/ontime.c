@@ -710,6 +710,7 @@ void ontime_update_load_avg(u64 delta, int cpu, unsigned long weight, struct sch
 		return;
 
 	oa->load_avg = div_u64(oa->load_sum, LOAD_AVG_MAX - 1024 + oa->period_contrib);
+	oa->load_avg = min_t(unsigned long, oa->load_avg, SCHED_CAPACITY_SCALE);
 	ontime_update_next_balance(cpu, oa);
 }
 
