@@ -709,7 +709,7 @@ static int select_proper_cpu(struct task_struct *p, int prev_cpu)
 			 * does not require performance and the prev cpu is over-
 			 * utilized, so it should do load balancing without
 			 * considering energy side. Therefore, it selects cpu
-			 * with smallest cpapacity and the least utilization among
+			 * with smallest capacity and the least utilization among
 			 * cpu that fits the task.
 			 */
 			if (best_min_util < new_util)
@@ -730,7 +730,7 @@ static int select_proper_cpu(struct task_struct *p, int prev_cpu)
 	trace_ems_select_proper_cpu(p, best_cpu, best_min_util);
 
 	/*
-	 * if it fails to find the vest cpu, choosing any cpu is meaningless.
+	 * if it fails to find the best cpu, choosing any cpu is meaningless.
 	 * Return prev cpu.
 	 */
 	return cpu_selected(best_cpu) ? best_cpu : prev_cpu;
@@ -784,11 +784,11 @@ int exynos_wakeup_balance(struct task_struct *p, int prev_cpu, int sd_flag, int 
 	 * Priority 2 : prefer-perf
 	 *
 	 * Prefer-perf is a function that operates on cgroup basis managed by
-	 * schedtune. When perfer-perf is set to 1, the tasks in the group are
+	 * schedtune. When prefer-perf is set to 1, the tasks in the group are
 	 * preferentially assigned to the performance cpu.
 	 *
 	 * It has a high priority because it is a function that is turned on
-	 * temporarily in scenario requiring reactivity(touch, app laucning).
+	 * temporarily in scenario requiring reactivity (touch, app launching).
 	 */
 	target_cpu = prefer_perf_cpu(p);
 	if (cpu_selected(target_cpu)) {
@@ -826,7 +826,7 @@ int exynos_wakeup_balance(struct task_struct *p, int prev_cpu, int sd_flag, int 
 	 * Typically, prefer-perf operates on groups that contains UX related tasks,
 	 * such as "top-app" or "foreground", so that major tasks are likely to be
 	 * assigned to performance cpu. On the other hand, global boost assigns
-	 * all tasks to performance cpu, which is not as effective as perfer-perf.
+	 * all tasks to performance cpu, which is not as effective as prefer-perf.
 	 * For this reason, global boost has a lower priority than prefer-perf.
 	 */
 	target_cpu = global_boosting(p);
@@ -839,7 +839,7 @@ int exynos_wakeup_balance(struct task_struct *p, int prev_cpu, int sd_flag, int 
 	 * Priority 5 : prefer-idle
 	 *
 	 * Prefer-idle is a function that operates on cgroup basis managed by
-	 * schedtune. When perfer-idle is set to 1, the tasks in the group are
+	 * schedtune. When prefer-idle is set to 1, the tasks in the group are
 	 * preferentially assigned to the idle cpu.
 	 *
 	 * Prefer-idle has a smaller performance impact than the above. Therefore

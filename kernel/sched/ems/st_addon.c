@@ -18,7 +18,7 @@
  *                            Prefer Perf                             *
  **********************************************************************/
 /*
- * If the prefger_perf of the group to which the task belongs is set, the task
+ * If the prefer_perf of the group to which the task belongs is set, the task
  * is assigned to the performance cpu preferentially.
  */
 int prefer_perf_cpu(struct task_struct *p)
