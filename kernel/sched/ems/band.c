@@ -54,15 +54,42 @@ int band_play_cpu(struct task_struct *p)
 
 static void pick_playable_cpus(struct task_band *band)
 {
+	int cpu, last_valid_cpu = -1;
+
 	cpumask_clear(&band->playable_cpus);
 
-	/* pick condition should be fixed */
-	if (band->util < 442) // LIT up-threshold * 2
-		cpumask_and(&band->playable_cpus, cpu_online_mask, cpu_coregroup_mask(0));
-	else if (band->util < 1260) // MED up-threshold * 2
-		cpumask_and(&band->playable_cpus, cpu_online_mask, cpu_coregroup_mask(4));
-	else
-		cpumask_and(&band->playable_cpus, cpu_online_mask, cpu_coregroup_mask(6));
+	/*
+	 * Find the first coregroup whose total capacity is large enough to
+	 * accommodate twice the band's current utilization.  Using 2x gives
+	 * the same headroom as the previous hard-coded "up-threshold * 2"
+	 * thresholds while being derived from the actual hardware topology
+	 * rather than from device-specific magic numbers.
+	 */
+	for_each_cpu(cpu, cpu_active_mask) {
+		unsigned long cpu_capacity;
+		int ncpus;
+
+		if (cpu != cpumask_first(cpu_coregroup_mask(cpu)))
+			continue;
+
+		cpu_capacity = get_cpu_max_capacity(cpu);
+		if (!cpu_capacity)
+			continue;
+
+		last_valid_cpu = cpu;
+		ncpus = cpumask_weight(cpu_coregroup_mask(cpu));
+
+		if ((band->util << 1) <= cpu_capacity * ncpus) {
+			cpumask_and(&band->playable_cpus, cpu_online_mask,
+				    cpu_coregroup_mask(cpu));
+			return;
+		}
+	}
+
+	/* Fallback: use the fastest available coregroup */
+	if (last_valid_cpu >= 0)
+		cpumask_and(&band->playable_cpus, cpu_online_mask,
+			    cpu_coregroup_mask(last_valid_cpu));
 }
 
 static unsigned long out_of_time = 100000000;	/* 100ms */
