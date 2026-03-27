@@ -4109,8 +4109,11 @@ static void *kmalloc_large_node(size_t size, gfp_t flags, int node)
 
 	flags |= __GFP_COMP;
 	page = alloc_pages_node(node, flags, get_order(size));
-	if (page)
+	if (page) {
 		ptr = page_address(page);
+		mod_lruvec_page_state(page, NR_SLAB_UNRECLAIMABLE,
+				      1 << get_order(size));
+	}
 
 	return kmalloc_large_node_hook(ptr, size, flags);
 }
@@ -4230,6 +4233,8 @@ void kfree(const void *x)
 	if (unlikely(!PageSlab(page))) {
 		BUG_ON(!PageCompound(page));
 		kfree_hook(object);
+		mod_lruvec_page_state(page, NR_SLAB_UNRECLAIMABLE,
+				      -(1 << compound_order(page)));
 		__free_pages(page, compound_order(page));
 		return;
 	}

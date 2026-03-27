@@ -1146,6 +1146,8 @@ void *kmalloc_order(size_t size, gfp_t flags, unsigned int order)
 	flags |= __GFP_COMP;
 	page = alloc_pages(flags, order);
 	ret = page ? page_address(page) : NULL;
+	if (ret)
+		mod_lruvec_page_state(page, NR_SLAB_UNRECLAIMABLE, 1 << order);
 	ret = kasan_kmalloc_large(ret, size, flags);
 	kmemleak_alloc(ret, size, 1, flags);
 	return ret;
