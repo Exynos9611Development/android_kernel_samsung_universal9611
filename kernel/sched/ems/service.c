@@ -176,16 +176,16 @@ int select_service_cpu(struct task_struct *p)
 	util = task_util_est(p);
 	if (util <= pp->threshold) {
 		service_cpu = select_prefer_cpu(p, 1, pp->prefer_cpus);
-		strcpy(state, "light task");
+		strlcpy(state, "light task", sizeof(state));
 		goto out;
 	}
 
 	if (p->prio <= 110) {
 		service_cpu = select_prefer_cpu(p, 1, pp->prefer_cpus);
-		strcpy(state, "high-prio task");
+		strlcpy(state, "high-prio task", sizeof(state));
 	} else {
 		service_cpu = select_prefer_cpu(p, pp->coregroup_count, pp->prefer_cpus);
-		strcpy(state, "heavy task");
+		strlcpy(state, "heavy task", sizeof(state));
 	}
 
 out:
