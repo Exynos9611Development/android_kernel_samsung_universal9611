@@ -123,7 +123,7 @@ static int update_interval = 20000000;	/* 20ms */
 void update_band(struct task_struct *p, long old_util)
 {
 	struct task_band *band;
-	unsigned long now = cpu_rq(0)->clock_task;
+	unsigned long now = (unsigned long)local_clock();
 
 	band = lookup_band(p);
 	if (!band)
@@ -191,7 +191,7 @@ static void join_band(struct task_struct *p)
 	band->member_count++;
 	trace_ems_manage_band(p, band->id, event);
 
-	__update_band(band, cpu_rq(0)->clock_task);
+	__update_band(band, (unsigned long)local_clock());
 	raw_spin_unlock(&band->lock);
 
 	write_unlock(&band_rwlock);
@@ -220,7 +220,7 @@ static void leave_band(struct task_struct *p)
 		cpumask_clear(&band->playable_cpus);
 	}
 
-	__update_band(band, cpu_rq(0)->clock_task);
+	__update_band(band, (unsigned long)local_clock());
 	raw_spin_unlock(&band->lock);
 
 	write_unlock(&band_rwlock);
