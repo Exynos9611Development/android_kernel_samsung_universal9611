@@ -891,10 +891,25 @@ const struct cpumask *cpu_fastest_mask(void)
 
 static void cpumask_speed_init(void)
 {
+	int cpu, fastest_cpu = 0;
+	unsigned long max_cap = 0;
+
 	cpumask_clear(&slowest_mask);
 	cpumask_clear(&fastest_mask);
+
+	/* Slowest mask: always the coregroup containing CPU 0 */
 	cpumask_copy(&slowest_mask, cpu_coregroup_mask(0));
-	cpumask_copy(&fastest_mask, cpu_coregroup_mask(4));
+
+	/* Fastest mask: coregroup with the highest per-CPU capacity */
+	for_each_possible_cpu(cpu) {
+		unsigned long cap = capacity_orig_of(cpu);
+
+		if (cap > max_cap) {
+			max_cap = cap;
+			fastest_cpu = cpu;
+		}
+	}
+	cpumask_copy(&fastest_mask, cpu_coregroup_mask(fastest_cpu));
 }
 
 struct kobject *ems_kobj;
