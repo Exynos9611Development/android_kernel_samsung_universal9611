@@ -759,7 +759,7 @@ static ssize_t store_##_name(struct kobject *k, const char *buf, size_t count)	\
 	unsigned int val;							\
 	struct ontime_cond *cond = container_of(k, struct ontime_cond, kobj);	\
 										\
-	if (!sscanf(buf, "%u", &val))						\
+	if (sscanf(buf, "%u", &val) != 1)					\
 		return -EINVAL;							\
 										\
 	val = val > _max ? _max : val;						\

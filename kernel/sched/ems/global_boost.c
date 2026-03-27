@@ -84,7 +84,7 @@ static ssize_t store_global_boost(struct kobject *kobj,
 {
 	unsigned int input;
 
-	if (!sscanf(buf, "%d", &input))
+	if (sscanf(buf, "%d", &input) != 1)
 		return -EINVAL;
 
 	gb_qos_update_request(&gb_req_user, input);
