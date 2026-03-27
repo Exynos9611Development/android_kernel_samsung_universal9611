@@ -118,14 +118,16 @@ unsigned int calculate_energy(struct task_struct *p, int target_cpu)
 		 *    utilization of CFS reflects the performance of cpu,
 		 *    normalize the utilization to calculate the amount of
 		 *    cpu usuage that excludes cpu performance.
+		 *
+		 * Step 0 already built util[] correctly via cpu_util_wake():
+		 *   - util[task_cpu(p)] has the task's contribution removed
+		 *   - util[target_cpu]  has the task's contribution added
+		 * Do not re-adjust here; doing so would double-count the task
+		 * and produce wrong energy estimates for every migration
+		 * candidate, biasing the scheduler toward keeping tasks on
+		 * their current CPU even when migration would be beneficial.
 		 */
 		for_each_cpu(i, cpu_coregroup_mask(cpu)) {
-			if (i == task_cpu(p))
-				util[i] -= min_t(unsigned long, util[i], task_util_est(p));
-
-			if (i == target_cpu)
-				util[i] += task_util_est(p);
-
 			/* utilization with task exceeds max capacity of cpu */
 			if (util[i] >= capacity) {
 				util_sum += SCHED_CAPACITY_SCALE;
