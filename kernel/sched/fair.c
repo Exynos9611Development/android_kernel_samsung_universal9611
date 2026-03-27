@@ -8267,6 +8267,17 @@ static void migrate_task_rq_fair(struct task_struct *p)
 static void task_dead_fair(struct task_struct *p)
 {
 	remove_entity_load_avg(&p->se);
+	/*
+	 * Remove the task from its task band when it exits.  Without this
+	 * call, dead task structs are left on band->members indefinitely:
+	 * __update_band() will keep dereferencing their se.avg fields
+	 * (use-after-free), member_count never returns to zero so the band
+	 * slot is never reclaimed, and all 20 band slots gradually fill up
+	 * with dead entries, breaking band-based CPU placement for all new
+	 * thread groups.  The resulting mis-placement compounds over hours of
+	 * interactive use, which is the primary source of the progressive lag.
+	 */
+	sync_band(p, false);
 }
 #endif /* CONFIG_SMP */
 
