@@ -114,7 +114,6 @@ static void __update_band(struct task_band *band, unsigned long now)
 	if (list_empty(&band->members))
 		return;
 
-	task = list_first_entry(&band->members, struct task_struct, band_members);
 	trace_ems_update_band(band->id, band->util, band->member_count,
 		*(unsigned int *)cpumask_bits(&band->playable_cpus));
 }
