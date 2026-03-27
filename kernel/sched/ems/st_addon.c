@@ -104,17 +104,27 @@ static int select_idle_cpu(struct task_struct *p)
 				&lowest_util_cpu, &lowest_util, &target_capacity);
 		}
 
+		/*
+		 * If an idle CPU was found in this coregroup, stop searching.
+		 * Prefer the smallest (most energy-efficient) idle coregroup.
+		 */
 		if (cpu_selected(lowest_idle_util_cpu)) {
 			strcpy(state, "lowest_idle_util");
 			target_cpu = lowest_idle_util_cpu;
 			break;
 		}
 
-		if (cpu_selected(lowest_util_cpu)) {
-			strcpy(state, "lowest_util");
-			target_cpu = lowest_util_cpu;
-			break;
-		}
+		/*
+		 * Do not stop on finding a non-idle CPU: a larger coregroup
+		 * might still have an idle CPU.  Keep searching and fall back
+		 * to the lowest-util active CPU only after all coregroups have
+		 * been checked.
+		 */
+	}
+
+	if (!cpu_selected(target_cpu) && cpu_selected(lowest_util_cpu)) {
+		strcpy(state, "lowest_util");
+		target_cpu = lowest_util_cpu;
 	}
 
 	target_cpu = !cpu_selected(target_cpu) ? task_cpu(p) : target_cpu;
