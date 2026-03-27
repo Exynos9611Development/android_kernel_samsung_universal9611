@@ -212,14 +212,15 @@ __ATTR(kernel_prefer_perf, 0444, show_kpp, NULL);
 
 static void __init build_prefer_cpus(void)
 {
-	struct device_node *dn, *child;
+	struct device_node *ems_dn, *dn, *child;
 	int index = 0;
 
-	dn = of_find_node_by_name(NULL, "ems");
-	if (!dn)
+	ems_dn = of_find_node_by_name(NULL, "ems");
+	if (!ems_dn)
 		return;
 
-	dn = of_find_node_by_name(dn, "prefer-perf-service");
+	dn = of_get_child_by_name(ems_dn, "prefer-perf-service");
+	of_node_put(ems_dn);
 	if (!dn)
 		return;
 
