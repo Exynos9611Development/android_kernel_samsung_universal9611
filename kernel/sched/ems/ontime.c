@@ -486,7 +486,7 @@ void ontime_migration(void)
 
 		/* Task in big cores don't be ontime migrated. */
 		if (cpumask_test_cpu(cpu, cpu_coregroup_mask(MAX_CAPACITY_CPU)))
-			break;
+			continue;
 
 		raw_spin_lock_irqsave(&rq->lock, flags);
 
