@@ -32,22 +32,56 @@ static struct task_band *lookup_band(struct task_struct *p)
 int band_play_cpu(struct task_struct *p)
 {
 	struct task_band *band;
-	int cpu, min_cpu = -1;
+	unsigned long task_util_val = task_util_est(p);
+	int cpu;
+	int best_idle_cpu = -1;
+	int min_cpu = -1;
 	unsigned long min_util = ULONG_MAX;
+	int best_idle_cstate = INT_MAX;
 
 	band = lookup_band(p);
 	if (!band)
 		return -1;
 
 	for_each_cpu(cpu, &band->playable_cpus) {
-		if (!cpu_rq(cpu)->nr_running)
-			return cpu;
+		unsigned long capacity_orig = capacity_orig_of(cpu);
+		unsigned long wake_util = cpu_util_wake(cpu, p);
+		unsigned long new_util = wake_util + task_util_val;
 
-		if (cpu_util(cpu) < min_util) {
+		new_util = max(new_util, boosted_task_util(p));
+
+		/* Skip CPUs that cannot accommodate this task */
+		if (new_util > capacity_orig)
+			continue;
+
+		if (idle_cpu(cpu)) {
+			/*
+			 * Prefer the shallowest idle state so the CPU
+			 * wakes up fastest and the task starts sooner.
+			 */
+			int cstate = idle_get_state_idx(cpu_rq(cpu));
+
+			if (cstate < best_idle_cstate) {
+				best_idle_cstate = cstate;
+				best_idle_cpu = cpu;
+			}
+			continue;
+		}
+
+		/*
+		 * Use cpu_util_wake() + task_util_est() for the non-idle
+		 * candidate rather than plain cpu_util() so that the task's
+		 * own blocked contribution is not double-counted on prev_cpu.
+		 */
+		if (new_util < min_util) {
 			min_cpu = cpu;
-			min_util = cpu_util(cpu);
+			min_util = new_util;
 		}
 	}
+
+	/* Idle CPU wins over an active one */
+	if (cpu_selected(best_idle_cpu))
+		return best_idle_cpu;
 
 	return min_cpu;
 }
