@@ -832,8 +832,10 @@ static int __init ontime_sysfs_init(void)
 
 		ret = kobject_init_and_add(&curr->kobj, &ktype_ontime,
 				ontime_kobj, "coregroup%d", curr->coregroup);
-		if (ret)
+		if (ret) {
+			kobject_put(ontime_kobj);
 			goto out;
+		}
 	}
 
 	return 0;
