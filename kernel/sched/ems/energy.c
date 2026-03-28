@@ -151,7 +151,10 @@ static int find_min_util_cpu(struct cpumask *mask, struct task_struct *p,
 			     unsigned long task_util_val)
 {
 	unsigned long min_util = ULONG_MAX;
+	unsigned long best_idle_util = ULONG_MAX;
 	int min_util_cpu = -1;
+	int best_idle_cpu = -1;
+	int best_idle_cstate = INT_MAX;
 	int cpu;
 
 	/* Find energy efficient cpu in each coregroup. */
@@ -164,15 +167,47 @@ static int find_min_util_cpu(struct cpumask *mask, struct task_struct *p,
 		 * cpu_util(), so this does not change their accounting.
 		 */
 		unsigned long util = cpu_util_wake(cpu, p);
-
-		/* Skip over-capacity cpu */
-		if (util + task_util_val > capacity_orig)
-			continue;
+		unsigned long new_util = util + task_util_val;
 
 		/*
-		 * Choose min util cpu within coregroup as candidates.
+		 * Account for schedtune boost: a boosted task needs at least
+		 * boosted_task_util() capacity, regardless of the raw PELT
+		 * estimate.  This matches the capacity check used in every
+		 * other EMS CPU selector (band.c, pcf.c, service.c, etc.).
+		 */
+		new_util = max(new_util, boosted_task_util(p));
+
+		/* Skip over-capacity cpu */
+		if (new_util > capacity_orig)
+			continue;
+
+		if (idle_cpu(cpu)) {
+			/*
+			 * Prefer idle CPUs for energy efficiency: placing a
+			 * task on an idle CPU avoids raising the frequency of
+			 * an already-busy CPU.  Among idle CPUs prefer the
+			 * shallowest C-state (fastest wake-up), and break
+			 * ties by choosing the lower-util CPU — consistent
+			 * with every other EMS CPU selector.
+			 */
+			int cstate = idle_get_state_idx(cpu_rq(cpu));
+
+			if (cstate > best_idle_cstate)
+				continue;
+			if (cstate == best_idle_cstate &&
+			    util >= best_idle_util)
+				continue;
+
+			best_idle_cstate = cstate;
+			best_idle_util = util;
+			best_idle_cpu = cpu;
+			continue;
+		}
+
+		/*
+		 * Choose min util cpu within coregroup as fallback.
 		 * Choosing a min util cpu is most likely to handle
-		 * wake-up task without increasing the frequecncy.
+		 * wake-up task without increasing the frequency.
 		 */
 		if (util < min_util) {
 			min_util = util;
@@ -180,7 +215,8 @@ static int find_min_util_cpu(struct cpumask *mask, struct task_struct *p,
 		}
 	}
 
-	return min_util_cpu;
+	/* Idle CPU is always preferable over an active one */
+	return cpu_selected(best_idle_cpu) ? best_idle_cpu : min_util_cpu;
 }
 
 static int select_eco_cpu(struct eco_env *eenv)
