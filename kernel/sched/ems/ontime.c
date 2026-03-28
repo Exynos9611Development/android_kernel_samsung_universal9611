@@ -236,15 +236,27 @@ ontime_select_target_cpu(struct task_struct *p, struct cpumask *fit_cpus)
 			} else {
 				/* 2. Find cpu that have to spare */
 				/*
-				 * Use task_util_est() instead of task_util() so
-				 * that an ontime task whose util_avg has decayed
-				 * during a brief sleep is still sized correctly
-				 * against the coverage threshold.  Without this
-				 * a heavy task could be placed on a backup CPU
-				 * that barely has room, causing an immediate
-				 * follow-up migration once util recovers.
+				 * Use boosted_task_util() rather than
+				 * task_util_est() so that the coverage check
+				 * accounts for the task's effective utilisation
+				 * after the schedtune boost margin is applied.
+				 * task_util_est() may underestimate the load
+				 * for a boosted task: if only task_util_est is
+				 * used, a task with a small raw PELT estimate
+				 * but a large boost margin could be placed on
+				 * an active CPU that is already near its
+				 * coverage limit, causing an immediate
+				 * follow-up re-migration once the boosted
+				 * utilisation is reflected.
+				 *
+				 * Since boosted_task_util() >= task_util_est()
+				 * this is a safe, conservative change: the
+				 * coverage threshold is evaluated with a
+				 * higher (more correct) task utilisation,
+				 * so heavily-loaded active CPUs are skipped
+				 * more aggressively for boosted ontime tasks.
 				 */
-				unsigned long new_util = task_util_est(p) + cpu_util_wake(i, p);
+				unsigned long new_util = boosted_task_util(p) + cpu_util_wake(i, p);
 
 				if (new_util * 100 >= coverage_util)
 					continue;
