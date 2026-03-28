@@ -935,7 +935,13 @@ static int __init init_ontime(void)
 
 		cond = kzalloc(sizeof(struct ontime_cond), GFP_KERNEL);
 		if (!cond) {
+			struct ontime_cond *tmp, *n;
+
 			pr_err("ontime: failed to allocate ontime_cond\n");
+			list_for_each_entry_safe(tmp, n, &cond_list, list) {
+				list_del(&tmp->list);
+				kfree(tmp);
+			}
 			of_node_put(dn);
 			return -ENOMEM;
 		}
