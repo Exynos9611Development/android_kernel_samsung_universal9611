@@ -222,8 +222,10 @@ static int __init lbt_sysfs_init(void)
 	if (!lbt_kobj)
 		goto out_free_names;
 
-	if (sysfs_create_group(lbt_kobj, &lbt_group))
+	if (sysfs_create_group(lbt_kobj, &lbt_group)) {
+		kobject_put(lbt_kobj);
 		goto out_free_names;
+	}
 
 	return 0;
 
