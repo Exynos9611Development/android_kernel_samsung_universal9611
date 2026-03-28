@@ -709,7 +709,15 @@ static int select_proper_cpu(struct task_struct *p, int prev_cpu)
 			continue;
 
 		for_each_cpu_and(i, tsk_cpus_allowed(p), cpu_coregroup_mask(cpu)) {
-			unsigned long capacity_orig = capacity_orig_of(i);
+			/*
+			 * Use capacity_of() (current thermal capacity) rather
+			 * than capacity_orig_of() (hardware max) so that CPUs
+			 * whose frequency has been reduced by thermal throttling
+			 * are correctly excluded when they cannot fit the task.
+			 * This avoids assigning work to hot CPUs, helping them
+			 * cool down and reducing system-wide lag.
+			 */
+			unsigned long capacity = capacity_of(i);
 			unsigned long wake_util, new_util;
 
 			wake_util = cpu_util_wake(i, p);
@@ -717,7 +725,7 @@ static int select_proper_cpu(struct task_struct *p, int prev_cpu)
 			new_util = max(new_util, boosted_task_util(p));
 
 			/* skip over-capacity cpu */
-			if (new_util > capacity_orig)
+			if (new_util > capacity)
 				continue;
 
 			/*
