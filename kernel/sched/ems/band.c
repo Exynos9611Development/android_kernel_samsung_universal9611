@@ -103,7 +103,17 @@ static void __update_band(struct task_band *band, unsigned long now)
 	list_for_each_entry(task, &band->members, band_members) {
 		if (now - task->se.avg.last_update_time > out_of_time)
 			continue;
-		util_sum += task_util(task);
+		/*
+		 * Use task_util_est() rather than task_util() so that the
+		 * band's utilization accounts for UTIL_EST history.  A band
+		 * member that has just woken up may have a decayed util_avg
+		 * close to zero, causing pick_playable_cpus() to assign the
+		 * band to the smallest coregroup and then immediately stall
+		 * when the task's true load is revealed.  task_util_est() uses
+		 * the EWMA / enqueued history and gives a stable, higher
+		 * estimate from the first wake-up.
+		 */
+		util_sum += task_util_est(task);
 	}
 
 	band->util = util_sum;
