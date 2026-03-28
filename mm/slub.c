@@ -3351,6 +3351,8 @@ int build_detached_freelist(struct kmem_cache *s, size_t size,
 		if (unlikely(!PageSlab(page))) {
 			BUG_ON(!PageCompound(page));
 			kfree_hook(object);
+			mod_lruvec_page_state(page, NR_SLAB_UNRECLAIMABLE,
+					      -(1 << compound_order(page)));
 			__free_pages(page, compound_order(page));
 			p[size] = NULL; /* mark object processed */
 			return size;
