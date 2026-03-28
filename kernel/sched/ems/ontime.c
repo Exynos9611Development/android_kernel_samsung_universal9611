@@ -665,7 +665,24 @@ int ontime_can_migration(struct task_struct *p, int dst_cpu)
 	 */
 	if (cpu_rq(src_cpu)->nr_running > 1) {
 		unsigned long cpu_util = cpu_util_wake(src_cpu, p);
-		unsigned long util = task_util(p);
+		/*
+		 * cpu_util_wake() already subtracts task_util_est(p) from the
+		 * CPU's utilisation.  Use task_util_est() here too so that both
+		 * sides of the comparison are consistent.
+		 *
+		 * If task_util() (raw PELT util_avg) is used instead, a task
+		 * whose util_avg has partially decayed after a brief sleep will
+		 * appear lighter than it really is, making cpu_util > util
+		 * trivially true and allowing the task to be shed downward even
+		 * when the source CPU does not truly have excess load from other
+		 * tasks.  With task_util_est() the comparison is:
+		 *
+		 *   cpu_util_wake (= total_util - task_util_est) > task_util_est
+		 *
+		 * i.e., only permit downward migration when the CPU carries more
+		 * than twice the task's expected utilisation in other work.
+		 */
+		unsigned long util = task_util_est(p);
 		unsigned long coverage_ratio = get_coverage_ratio(src_cpu);
 
 		if ((cpu_util * 100 >= capacity_orig_of(src_cpu) * coverage_ratio)
