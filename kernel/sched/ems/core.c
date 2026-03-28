@@ -395,8 +395,16 @@ static int lb_idle_pull_tasks(int dst_cpu, int src_cpu, int type)
 		 * not mistaken for a light task.  task_util_est() returns the
 		 * max of util_avg and the EWMA history, giving a stable estimate
 		 * of the task's true load from the moment it woke up.
+		 *
+		 * Also account for schedtune boost: a boosted task's effective
+		 * utilisation is max(task_util_est, boosted_task_util), which
+		 * can significantly exceed the raw PELT estimate.  Without this
+		 * a highly-boosted task with a modest task_util_est would look
+		 * light and be incorrectly pulled to the little cluster, where
+		 * it would immediately stall and generate more heat trying to
+		 * meet its performance target.
 		 */
-		util = task_util_est(p);
+		util = max(task_util_est(p), boosted_task_util(p));
 		if (util > min_util)
 			continue;
 
