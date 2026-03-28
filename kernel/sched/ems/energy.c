@@ -172,7 +172,18 @@ static int find_min_util_cpu(struct cpumask *mask, struct task_struct *p,
 
 	/* Find energy efficient cpu in each coregroup. */
 	for_each_cpu_and(cpu, mask, cpu_active_mask) {
-		unsigned long capacity_orig = capacity_orig_of(cpu);
+		/*
+		 * Use capacity_of() rather than capacity_orig_of() for the
+		 * over-capacity check.  capacity_of() reflects the CPU's
+		 * current dynamic capacity, which can be reduced below the
+		 * hardware maximum by thermal throttling or power-capping.
+		 * With PELT frequency invariance the util values (cpu_util_wake,
+		 * task_util_est) are already frequency-scaled, so comparing
+		 * against the current capacity_of() correctly avoids placing
+		 * new tasks on thermally-hot CPUs that cannot service them at
+		 * full speed — reducing both heat and lag.
+		 */
+		unsigned long capacity = capacity_of(cpu);
 		/*
 		 * Use cpu_util_wake() so that the task's blocked contribution
 		 * is removed from its current CPU's utilisation estimate.
@@ -191,7 +202,7 @@ static int find_min_util_cpu(struct cpumask *mask, struct task_struct *p,
 		new_util = max(new_util, boosted_task_util(p));
 
 		/* Skip over-capacity cpu */
-		if (new_util > capacity_orig)
+		if (new_util > capacity)
 			continue;
 
 		if (idle_cpu(cpu)) {
