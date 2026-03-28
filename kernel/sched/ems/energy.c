@@ -268,10 +268,13 @@ int select_energy_cpu(struct task_struct *p, int prev_cpu, int sd_flag, int sync
 
 	/*
 	 * We cannot do energy-aware wakeup placement sensibly for tasks
-	 * with 0 utilization, so let them be placed according to the normal
-	 * strategy.
+	 * with 0 utilization.  Use task_util_est() so that tasks which have
+	 * run before (e.g. camera threads, recently-closed apps) use their
+	 * UTIL_EST history instead of a decayed util_avg, ensuring they get
+	 * energy-aware placement immediately on wake-up rather than falling
+	 * back to the lowest-capacity CPU.
 	 */
-	if (!task_util(p))
+	if (!task_util_est(p))
 		return -1;
 
 	if (sysctl_sched_sync_hint_enable && sync)
