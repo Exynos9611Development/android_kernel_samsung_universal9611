@@ -220,7 +220,16 @@ ontime_select_target_cpu(struct task_struct *p, struct cpumask *fit_cpus)
 				}
 			} else {
 				/* 2. Find cpu that have to spare */
-				unsigned long new_util = task_util(p) + cpu_util_wake(i, p);
+				/*
+				 * Use task_util_est() instead of task_util() so
+				 * that an ontime task whose util_avg has decayed
+				 * during a brief sleep is still sized correctly
+				 * against the coverage threshold.  Without this
+				 * a heavy task could be placed on a backup CPU
+				 * that barely has room, causing an immediate
+				 * follow-up migration once util recovers.
+				 */
+				unsigned long new_util = task_util_est(p) + cpu_util_wake(i, p);
 
 				if (new_util * 100 >= coverage_util)
 					continue;
