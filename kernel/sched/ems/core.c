@@ -674,6 +674,8 @@ static int select_proper_cpu(struct task_struct *p, int prev_cpu)
 {
 	int cpu;
 	unsigned long best_min_util = ULONG_MAX;
+	int best_idle_cpu = -1;
+	int best_idle_cstate = INT_MAX;
 	int best_cpu = -1;
 
 	for_each_cpu(cpu, cpu_active_mask) {
@@ -700,6 +702,22 @@ static int select_proper_cpu(struct task_struct *p, int prev_cpu)
 				continue;
 
 			/*
+			 * Prefer idle CPUs: waking a sleeping CPU from a
+			 * shallow C-state is faster than preempting a running
+			 * task and avoids unnecessary interference.  Among idle
+			 * CPUs prefer the shallowest idle state.
+			 */
+			if (idle_cpu(i)) {
+				int cstate = idle_get_state_idx(cpu_rq(i));
+
+				if (cstate < best_idle_cstate) {
+					best_idle_cstate = cstate;
+					best_idle_cpu = i;
+				}
+				continue;
+			}
+
+			/*
 			 * Best target) lowest utilization among lowest-cap cpu
 			 *
 			 * If the sequence reaches this function, the wakeup task
@@ -717,12 +735,23 @@ static int select_proper_cpu(struct task_struct *p, int prev_cpu)
 		}
 
 		/*
+		 * If an idle CPU was found in this (smallest-fitting) coregroup
+		 * stop immediately — it is the optimal choice.
+		 */
+		if (cpu_selected(best_idle_cpu))
+			break;
+
+		/*
 		 * if it fails to find the best cpu in this coregroup, visit next
 		 * coregroup.
 		 */
 		if (cpu_selected(best_cpu))
 			break;
 	}
+
+	/* Idle CPU is preferable over any active one */
+	if (cpu_selected(best_idle_cpu))
+		best_cpu = best_idle_cpu;
 
 	trace_ems_select_proper_cpu(p, best_cpu, best_min_util);
 
