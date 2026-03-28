@@ -38,6 +38,7 @@ int band_play_cpu(struct task_struct *p)
 	int min_cpu = -1;
 	unsigned long min_util = ULONG_MAX;
 	int best_idle_cstate = INT_MAX;
+	unsigned long best_idle_util = ULONG_MAX;
 
 	band = lookup_band(p);
 	if (!band)
@@ -58,13 +59,23 @@ int band_play_cpu(struct task_struct *p)
 			/*
 			 * Prefer the shallowest idle state so the CPU
 			 * wakes up fastest and the task starts sooner.
+			 * Among CPUs at the same idle depth prefer the
+			 * one with the lower utilisation — consistent
+			 * with pcf.c and service.c — so that video
+			 * threads land on the most headroom-rich CPU
+			 * and avoid unnecessary frequency ramp-ups.
 			 */
 			int cstate = idle_get_state_idx(cpu_rq(cpu));
 
-			if (cstate < best_idle_cstate) {
-				best_idle_cstate = cstate;
-				best_idle_cpu = cpu;
-			}
+			if (cstate > best_idle_cstate)
+				continue;
+			if (cstate == best_idle_cstate &&
+			    wake_util >= best_idle_util)
+				continue;
+
+			best_idle_cstate = cstate;
+			best_idle_util = wake_util;
+			best_idle_cpu = cpu;
 			continue;
 		}
 
