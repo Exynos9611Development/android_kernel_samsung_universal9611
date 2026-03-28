@@ -915,9 +915,25 @@ static int __init init_sysfs(void)
 {
 	cpumask_speed_init();
 	ems_kobj = kobject_create_and_add("ems", kernel_kobj);
+	if (!ems_kobj) {
+		pr_err("EMS: failed to create ems kobject\n");
+		return -ENOMEM;
+	}
 
 	lb_env = alloc_percpu(struct lb_env);
+	if (!lb_env) {
+		pr_err("EMS: failed to alloc lb_env\n");
+		kobject_put(ems_kobj);
+		return -ENOMEM;
+	}
+
 	lb_work = alloc_percpu(struct cpu_stop_work);
+	if (!lb_work) {
+		pr_err("EMS: failed to alloc lb_work\n");
+		free_percpu(lb_env);
+		kobject_put(ems_kobj);
+		return -ENOMEM;
+	}
 
 	return 0;
 }
