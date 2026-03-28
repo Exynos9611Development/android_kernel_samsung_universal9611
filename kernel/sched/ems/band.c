@@ -190,7 +190,7 @@ void update_band(struct task_struct *p, long old_util)
 	 * task changes abruptly.
 	 */
 	if (now - band->last_update_time >= update_interval ||
-	    (old_util >= 0 && abs(old_util - task_util(p)) > (SCHED_CAPACITY_SCALE >> 4))) {
+	    (old_util >= 0 && abs(old_util - task_util_est(p)) > (SCHED_CAPACITY_SCALE >> 4))) {
 		raw_spin_lock(&band->lock);
 		__update_band(band, now);
 		raw_spin_unlock(&band->lock);
