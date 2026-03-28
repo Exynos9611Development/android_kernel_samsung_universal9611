@@ -382,8 +382,18 @@ static int lb_idle_pull_tasks(int dst_cpu, int src_cpu, int type)
 			break;
 		}
 
-		/* find min util cpu */
-		util = task_util(p);
+		/*
+		 * When pulling from a faster (big) cluster to a slower (little)
+		 * cluster, prefer the task with the lowest expected utilisation
+		 * so that genuinely heavy tasks stay on the big cluster.
+		 *
+		 * Use task_util_est() instead of task_util() so that a task
+		 * whose util_avg has partially decayed after a brief sleep is
+		 * not mistaken for a light task.  task_util_est() returns the
+		 * max of util_avg and the EWMA history, giving a stable estimate
+		 * of the task's true load from the moment it woke up.
+		 */
+		util = task_util_est(p);
 		if (util > min_util)
 			continue;
 
