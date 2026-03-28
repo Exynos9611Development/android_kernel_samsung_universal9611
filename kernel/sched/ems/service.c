@@ -105,8 +105,10 @@ select_prefer_cpu(struct task_struct *p, int coregroup_count, struct cpumask *pr
 {
 	struct cpumask mask;
 	int coregroup, cpu;
+	unsigned long task_util_val = task_util_est(p);
 	unsigned long max_spare_cap = 0;
 	int best_perf_cstate = INT_MAX;
+	unsigned long best_perf_idle_util = ULONG_MAX;
 	int best_perf_cpu = -1;
 	int backup_cpu = -1;
 
@@ -118,24 +120,44 @@ select_prefer_cpu(struct task_struct *p, int coregroup_count, struct cpumask *pr
 			continue;
 
 		for_each_cpu_and(cpu, &p->cpus_allowed, &mask) {
-			unsigned long capacity_orig;
-			unsigned long wake_util;
+			unsigned long capacity_orig = capacity_orig_of(cpu);
+			unsigned long wake_util = cpu_util_wake(cpu, p);
+			unsigned long new_util;
+
+			new_util = wake_util + task_util_val;
+			new_util = max(new_util, boosted_task_util(p));
+
+			/* Skip over-capacity CPUs for both idle and active paths */
+			if (new_util > capacity_orig)
+				continue;
 
 			if (idle_cpu(cpu)) {
 				int idle_idx = idle_get_state_idx(cpu_rq(cpu));
 
-				/* find shallowest idle state cpu */
-				if (idle_idx >= best_perf_cstate)
+				/*
+				 * Prefer shallowest idle state for fastest wake-up.
+				 * Among equal idle depths prefer the less loaded CPU
+				 * (same fix as pcf.c::select_perf_cpu).
+				 */
+				if (idle_idx > best_perf_cstate)
+					continue;
+
+				if (idle_idx == best_perf_cstate &&
+				    wake_util >= best_perf_idle_util)
 					continue;
 
 				/* Keep track of best idle CPU */
 				best_perf_cstate = idle_idx;
+				best_perf_idle_util = wake_util;
 				best_perf_cpu = cpu;
 				continue;
 			}
 
-			capacity_orig = capacity_orig_of(cpu);
-			wake_util = cpu_util_wake(cpu, p);
+			/*
+			 * For active CPUs use spare capacity as the metric but
+			 * with the capacity check already applied above so we
+			 * never pick a CPU that would overflow after placement.
+			 */
 			if ((capacity_orig - wake_util) < max_spare_cap)
 				continue;
 
