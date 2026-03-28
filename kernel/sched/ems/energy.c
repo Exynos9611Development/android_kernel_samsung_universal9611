@@ -147,7 +147,8 @@ unsigned int calculate_energy(struct task_struct *p, int target_cpu)
 	return total_energy;
 }
 
-static int find_min_util_cpu(struct cpumask *mask, unsigned long task_util)
+static int find_min_util_cpu(struct cpumask *mask, struct task_struct *p,
+			     unsigned long task_util_val)
 {
 	unsigned long min_util = ULONG_MAX;
 	int min_util_cpu = -1;
@@ -156,10 +157,16 @@ static int find_min_util_cpu(struct cpumask *mask, unsigned long task_util)
 	/* Find energy efficient cpu in each coregroup. */
 	for_each_cpu_and(cpu, mask, cpu_active_mask) {
 		unsigned long capacity_orig = capacity_orig_of(cpu);
-		unsigned long util = cpu_util(cpu);
+		/*
+		 * Use cpu_util_wake() so that the task's blocked contribution
+		 * is removed from its current CPU's utilisation estimate.
+		 * For all other CPUs cpu_util_wake() is equivalent to
+		 * cpu_util(), so this does not change their accounting.
+		 */
+		unsigned long util = cpu_util_wake(cpu, p);
 
 		/* Skip over-capacity cpu */
-		if (util + task_util > capacity_orig)
+		if (util + task_util_val > capacity_orig)
 			continue;
 
 		/*
@@ -211,7 +218,7 @@ static int select_eco_cpu(struct eco_env *eenv)
 		 * Select the best target, which is expected to consume the
 		 * lowest energy among the min util cpu for each coregroup.
 		 */
-		energy_cpu = find_min_util_cpu(&mask, task_util);
+		energy_cpu = find_min_util_cpu(&mask, eenv->p, task_util);
 		if (cpu_selected(energy_cpu)) {
 			unsigned int energy = calculate_energy(eenv->p, energy_cpu);
 
