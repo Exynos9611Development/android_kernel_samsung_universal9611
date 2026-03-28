@@ -22,6 +22,7 @@ int select_perf_cpu(struct task_struct *p)
 	unsigned long best_perf_cap_orig = 0;
 	unsigned long max_spare_cap = 0;
 	int best_perf_cstate = INT_MAX;
+	unsigned long new_util;
 	int best_perf_cpu = -1;
 	int backup_cpu = -1;
 
@@ -75,8 +76,18 @@ int select_perf_cpu(struct task_struct *p)
 		 * the cpu with the biggest spare capacity to handle the most
 		 * computations. Since a high performance cpu has a large capacity,
 		 * cpu having a high performance is likely to be selected.
+		 *
+		 * Use task_util_est() rather than a raw util delta so that tasks
+		 * with UTIL_EST history (e.g. camera threads being rescheduled)
+		 * are accounted for correctly.  Also honour boosted_task_util()
+		 * so that a schedtune-boosted task is not placed on a CPU whose
+		 * effective capacity would be exceeded after the boost is applied.
 		 */
 		wake_util = cpu_util_wake(cpu, p);
+		new_util = wake_util + task_util_est(p);
+		new_util = max(new_util, boosted_task_util(p));
+		if (new_util > capacity_orig)
+			continue;
 		if ((capacity_orig - wake_util) < max_spare_cap)
 			continue;
 
