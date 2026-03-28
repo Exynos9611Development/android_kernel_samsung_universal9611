@@ -324,8 +324,11 @@ static int freqvar_boost_init(struct device_node *dn, const struct cpumask *mask
 	freqvar_boost_update(policy->cpu, policy->cur);
 
 	ret = sugov_sysfs_add_attr(policy, &freqvar_boost_attr.attr);
-	if (ret)
+	if (ret) {
+		for_each_cpu(cpu, mask)
+			per_cpu(freqvar_boost, cpu) = NULL;
 		goto fail_init;
+	}
 
 	cpufreq_cpu_put(policy);
 	return 0;
@@ -567,8 +570,11 @@ static int freqvar_upscale_ratio_init(struct device_node *dn, const struct cpuma
 	freqvar_upscale_ratio_update(policy->cpu, policy->cur);
 
 	ret = sugov_sysfs_add_attr(policy, &freqvar_upscale_ratio_attr.attr);
-	if (ret)
+	if (ret) {
+		for_each_cpu(cpu, mask)
+			per_cpu(freqvar_upscale_ratio, cpu) = NULL;
 		goto fail_init;
+	}
 
 	cpufreq_cpu_put(policy);
 	return 0;
