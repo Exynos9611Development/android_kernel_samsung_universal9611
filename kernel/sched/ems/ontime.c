@@ -189,6 +189,7 @@ ontime_select_target_cpu(struct task_struct *p, struct cpumask *fit_cpus)
 		int i;
 		int best_cpu = -1, backup_cpu = -1;
 		unsigned int min_exit_latency = UINT_MAX;
+		unsigned long best_idle_util = ULONG_MAX;
 		unsigned long min_util = ULONG_MAX;
 		unsigned long coverage_util;
 
@@ -208,14 +209,28 @@ ontime_select_target_cpu(struct task_struct *p, struct cpumask *fit_cpus)
 			if (idle_cpu(i)) {
 				/* 1. Find shallowest idle_cpu */
 				struct cpuidle_state *idle = idle_get_state(cpu_rq(i));
+				unsigned long idle_util;
 
 				if (!idle) {
 					best_cpu = i;
 					break;
 				}
 
-				if (idle->exit_latency < min_exit_latency) {
+				/*
+				 * Prefer the shallowest C-state for fastest
+				 * wake-up latency.  Among CPUs at the same idle
+				 * depth prefer the one with lower utilisation so
+				 * that the migrated task has the most headroom
+				 * and the CPU frequency does not need to ramp
+				 * up immediately — consistent with the fix
+				 * applied to pcf.c and service.c.
+				 */
+				idle_util = cpu_util_wake(i, p);
+				if (idle->exit_latency < min_exit_latency ||
+				    (idle->exit_latency == min_exit_latency &&
+				     idle_util < best_idle_util)) {
 					min_exit_latency = idle->exit_latency;
+					best_idle_util = idle_util;
 					best_cpu = i;
 				}
 			} else {
