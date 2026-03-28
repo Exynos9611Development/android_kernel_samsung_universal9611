@@ -676,6 +676,7 @@ static int select_proper_cpu(struct task_struct *p, int prev_cpu)
 	unsigned long best_min_util = ULONG_MAX;
 	int best_idle_cpu = -1;
 	int best_idle_cstate = INT_MAX;
+	unsigned long best_idle_util = ULONG_MAX;
 	int best_cpu = -1;
 
 	for_each_cpu(cpu, cpu_active_mask) {
@@ -705,15 +706,29 @@ static int select_proper_cpu(struct task_struct *p, int prev_cpu)
 			 * Prefer idle CPUs: waking a sleeping CPU from a
 			 * shallow C-state is faster than preempting a running
 			 * task and avoids unnecessary interference.  Among idle
-			 * CPUs prefer the shallowest idle state.
+			 * CPUs prefer the shallowest idle state, and break ties
+			 * by choosing the less loaded CPU.
 			 */
 			if (idle_cpu(i)) {
 				int cstate = idle_get_state_idx(cpu_rq(i));
 
-				if (cstate < best_idle_cstate) {
-					best_idle_cstate = cstate;
-					best_idle_cpu = i;
-				}
+				/*
+				 * Prefer shallowest idle state first.
+				 * Among CPUs at the same idle depth prefer
+				 * the one with lower utilisation — consistent
+				 * with pcf.c, service.c and band.c — so the
+				 * task gets the most headroom and avoids
+				 * unnecessary frequency scaling.
+				 */
+				if (cstate > best_idle_cstate)
+					continue;
+				if (cstate == best_idle_cstate &&
+				    wake_util >= best_idle_util)
+					continue;
+
+				best_idle_cstate = cstate;
+				best_idle_util = wake_util;
+				best_idle_cpu = i;
 				continue;
 			}
 
