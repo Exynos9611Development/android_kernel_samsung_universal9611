@@ -75,8 +75,21 @@ unsigned int calculate_energy(struct task_struct *p, int target_cpu)
 	for_each_cpu(cpu, cpu_active_mask) {
 		util[cpu] = cpu_util_wake(cpu, p);
 
-		if (unlikely(cpu == target_cpu))
-			util[cpu] += task_util_est(p);
+		if (unlikely(cpu == target_cpu)) {
+			/*
+			 * Use max(task_util_est, boosted_task_util) so that
+			 * the energy cost reflects the capacity the task will
+			 * actually consume at runtime.  A schedtune-boosted
+			 * task needs boosted_task_util() capacity; ignoring
+			 * the boost underestimates the frequency needed on
+			 * the target CPU and biases the energy comparison
+			 * toward keeping the task on its current CPU.
+			 */
+			unsigned long tutil = task_util_est(p);
+
+			tutil = max(tutil, boosted_task_util(p));
+			util[cpu] += tutil;
+		}
 	}
 
 	for_each_cpu(cpu, cpu_active_mask) {
