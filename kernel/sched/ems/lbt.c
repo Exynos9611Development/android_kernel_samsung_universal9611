@@ -90,7 +90,12 @@ bool lbt_overutilized(int cpu, int level)
 void update_lbt_overutil(int cpu, unsigned long capacity)
 {
 	struct lbt_overutil *ou = per_cpu(lbt_overutil, cpu);
-	int level, last = get_last_level(ou);
+	int level, last;
+
+	if (!ou)
+		return;
+
+	last = get_last_level(ou);
 
 	for (level = 0; level <= last; level++) {
 		if (ou[level].ratio == DISABLE_OU)
