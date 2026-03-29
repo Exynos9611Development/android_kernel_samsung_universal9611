@@ -90,8 +90,7 @@ static int devfreq_simple_interactive_func(struct devfreq *df,
 			data->freq_timer.expires > jiffies) {
 		*freq = df->previous_freq;
 		if (!timer_pending(&data->freq_timer))
-			/* timer is bound to cpu0 */
-			add_timer_on(&data->freq_timer, BOUND_CPU_NUM);
+			add_timer(&data->freq_timer);
 
 		goto out;
 	} else if (timer_pending(&data->freq_timer)) {
@@ -182,8 +181,6 @@ static int devfreq_simple_interactive_register_notifier(struct devfreq *df)
 
 		goto err2;
 	}
-
-	kthread_bind(data->change_freq_task, BOUND_CPU_NUM);
 
 	return 0;
 
