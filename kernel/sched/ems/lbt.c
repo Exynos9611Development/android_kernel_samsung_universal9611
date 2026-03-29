@@ -21,7 +21,7 @@
 /*			Load Balance Trigger			*/
 /****************************************************************/
 #define DISABLE_OU		-1
-#define DEFAULT_OU_RATIO	80
+#define DEFAULT_OU_RATIO	70
 
 struct lbt_overutil {
 	bool			top;
