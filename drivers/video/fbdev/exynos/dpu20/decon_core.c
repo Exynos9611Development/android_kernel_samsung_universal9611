@@ -1419,6 +1419,7 @@ static int decon_import_buffer(struct decon_device *decon, int idx,
 #endif
 		if (!buf_size) {
 			decon_err("failed to map buffer\n");
+			dma_buf_put(buf);
 			return -ENOMEM;
 		}
 
@@ -1784,6 +1785,12 @@ static void decon_dump_afbc_handle(struct decon_device *decon,
 			decon_info("DV(0x%p), KV(0x%p), size(%d)\n",
 					(void *)dma_bufs[win_id][0].dma_addr,
 					v_addr, size);
+#if defined(CONFIG_SUPPORT_LEGACY_ION)
+			ion_unmap_kernel(decon->ion_client,
+					dma_bufs[win_id][0].ion_handle);
+#else
+			dma_buf_vunmap(dma_bufs[win_id][0].dma_buf, v_addr);
+#endif
 		}
 	}
 
@@ -3445,6 +3452,10 @@ static int decon_fb_alloc_memory(struct decon_device *decon, struct decon_win *w
 	}
 
 	vaddr = ion_map_kernel(decon->ion_client, handle);
+	if (IS_ERR_OR_NULL(vaddr)) {
+		dev_err(decon->dev, "ion_map_kernel() failed\n");
+		goto err_map;
+	}
 #else
 	buf = ion_alloc_dmabuf("ion_system_heap", (size_t)size, 0);
 	if (IS_ERR(buf)) {
@@ -3465,6 +3476,8 @@ static int decon_fb_alloc_memory(struct decon_device *decon, struct decon_win *w
 
 #if !defined(CONFIG_SUPPORT_LEGACY_ION)
 	dma_buf_vunmap(buf, vaddr);
+#else
+	ion_unmap_kernel(decon->ion_client, handle);
 #endif
 
 	fbi->screen_base = NULL;
@@ -3548,10 +3561,13 @@ static int decon_fb_test_alloc_memory(struct decon_device *decon, u32 size)
 	}
 
 	vaddr = ion_map_kernel(decon->ion_client, handle);
+	if (IS_ERR_OR_NULL(vaddr)) {
+		dev_err(decon->dev, "ion_map_kernel() failed\n");
+		goto err_map;
+	}
 
 	memset(vaddr, 0x00, size);
-
-	fbi->screen_base = vaddr;
+	ion_unmap_kernel(decon->ion_client, handle);
 
 	if (decon->dt.out_type == DECON_OUT_DP) {
 		displayport = v4l2_get_subdevdata(decon->out_sd[0]);
@@ -3769,6 +3785,7 @@ static void decon_parse_dt(struct decon_device *decon)
 			decon->d.eint_pend = of_iomap(te_eint, 0);
 			if (!decon->d.eint_pend)
 				decon_info("Failed to get te eint pend\n");
+			of_node_put(te_eint);
 		}
 
 		cam_stat = of_get_child_by_name(decon->dev->of_node, "cam-stat");
@@ -3778,6 +3795,7 @@ static void decon_parse_dt(struct decon_device *decon)
 			decon->hiber.cam_status = of_iomap(cam_stat, 0);
 			if (!decon->hiber.cam_status)
 				decon_info("Failed to get CAM0-STAT Reg\n");
+			of_node_put(cam_stat);
 		}
 	}
 #if defined(CONFIG_EXYNOS_PD)
@@ -4187,6 +4205,8 @@ err_display:
 err_win:
 	decon_unregister_subdevs(decon);
 err_subdev:
+	if (decon->hiber.thread)
+		kthread_stop(decon->hiber.thread);
 	decon_destroy_debugfs(decon);
 err_pinctrl:
 	decon_destroy_psr_info(decon);
@@ -4195,7 +4215,6 @@ err_psr:
 err_vsync:
 	iounmap(decon->res.ss_regs);
 err_res:
-	kfree(decon);
 err:
 	decon_err("decon probe fail");
 	return ret;
@@ -4220,6 +4239,7 @@ static int decon_remove(struct platform_device *pdev)
 
 	debugfs_remove_recursive(decon->d.debug_root);
 	kfree(decon->d.event_log);
+	decon_abd_unregister(&decon->abd);
 
 	decon_info("remove sucessful\n");
 	return 0;

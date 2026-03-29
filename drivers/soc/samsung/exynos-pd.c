@@ -38,8 +38,10 @@ struct exynos_pm_domain *exynos_pd_lookup_name(const char *domain_name)
 			pd = platform_get_drvdata(pdev);
 			if (!strcmp(pd->name, domain_name)) {
 				exypd = pd;
+				put_device(&pdev->dev);
 				break;
 			}
+			put_device(&pdev->dev);
 		}
 	}
 	return exypd;
@@ -290,6 +292,7 @@ static void exynos_pd_show_power_domain(void)
 			pd = platform_get_drvdata(pdev);
 			pr_info("   %-9s - %-3s\n", pd->genpd.name,
 					cal_pd_status(pd->cal_pdid) ? "on" : "off");
+			put_device(&pdev->dev);
 		} else
 			pr_info("   %-9s - %s\n", np->name, "on,  always");
 	}
@@ -431,6 +434,8 @@ static __init int exynos_pd_dt_parse(void)
 
 		/* child_pd_pdev should have value. */
 		child_pd_pdev = of_find_device_by_node(np);
+		if (!child_pd_pdev)
+			continue;
 		child_pd = platform_get_drvdata(child_pd_pdev);
 
 		/* search parents in device tree */
@@ -443,11 +448,15 @@ static __init int exynos_pd_dt_parse(void)
 			/* display error when parent is unmanaged. */
 			if (!of_device_is_available(parent)) {
 				pr_err(EXYNOS_PD_PREFIX "%s is not managed by runtime pm.\n", parent->name);
+				of_node_put(parent);
 				continue;
 			}
 
 			/* parent_pd_pdev should have value. */
 			parent_pd_pdev = of_find_device_by_node(parent);
+			of_node_put(parent);
+			if (!parent_pd_pdev)
+				continue;
 			parent_pd = platform_get_drvdata(parent_pd_pdev);
 
 			if (pm_genpd_add_subdomain(&parent_pd->genpd, &child_pd->genpd))
@@ -456,7 +465,9 @@ static __init int exynos_pd_dt_parse(void)
 			else
 				pr_info(EXYNOS_PD_PREFIX "%s has a new child %s.\n",
 						parent_pd->name, child_pd->name);
+			put_device(&parent_pd_pdev->dev);
 		}
+		put_device(&child_pd_pdev->dev);
 	}
 
 	return 0;

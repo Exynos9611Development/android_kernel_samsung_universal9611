@@ -888,17 +888,16 @@ void revert_creds(const struct cred *old)
 }
 EXPORT_SYMBOL(revert_creds);
 
+static void cred_ctor(void *data)
+{
+	/* Dummy constructor to prevent slab cache merging. */
+}
 #ifdef	CONFIG_RKP_KDP
-void cred_ctor(void *data)
+static void sec_ctor(void *data)
 {
 	/* Dummy constructor to make sure we have separate slabs caches. */
 }
-void sec_ctor(void *data)
-{
-	/* Dummy constructor to make sure we have separate slabs caches. */
-	//printk("\n initializing sec_ctor = %p \n",data);
-}
-void usecnt_ctor(void *data)
+static void usecnt_ctor(void *data)
 {
 	/* Dummy constructor to make sure we have separate slabs caches. */
 }
@@ -911,7 +910,8 @@ void __init cred_init(void)
 {
 	/* allocate a slab in which we can store credentials */
 	cred_jar = kmem_cache_create("cred_jar", sizeof(struct cred), 0,
-			SLAB_HWCACHE_ALIGN|SLAB_PANIC|SLAB_ACCOUNT, NULL);
+			SLAB_HWCACHE_ALIGN|SLAB_PANIC|SLAB_ACCOUNT|SLAB_RECLAIM_ACCOUNT,
+			cred_ctor);
 #ifdef	CONFIG_RKP_KDP
 	if(rkp_cred_enable) {
 		cred_jar_ro = kmem_cache_create("cred_jar_ro", sizeof(struct cred),

@@ -268,6 +268,10 @@ static ssize_t ssp_scontext_write(struct file *file, const char __user *buf,
 	}
 
 	buffer = kzalloc(count * sizeof(char), GFP_KERNEL);
+	if (!buffer) {
+		ssp_errf("allocate memory for buffer err");
+		return -ENOMEM;
+	}
 
 	ret = copy_from_user(buffer, buf, count);
 	if (unlikely(ret)) {

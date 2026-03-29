@@ -91,7 +91,7 @@ void detach_task(struct rq *src_rq, struct rq *dst_rq, struct task_struct *p,
 	double_lock_balance(src_rq, dst_rq);
 	set_task_cpu(p, dst_rq->cpu);
 	double_unlock_balance(src_rq, dst_rq);
-	rq_unpin_lock(src_rq, rf);
+	rq_repin_lock(src_rq, rf);
 }
 
 int detach_one_task(struct rq *src_rq, struct rq *dst_rq,
@@ -385,8 +385,26 @@ static int lb_idle_pull_tasks(int dst_cpu, int src_cpu, int type)
 			break;
 		}
 
-		/* find min util cpu */
-		util = task_util(p);
+		/*
+		 * When pulling from a faster (big) cluster to a slower (little)
+		 * cluster, prefer the task with the lowest expected utilisation
+		 * so that genuinely heavy tasks stay on the big cluster.
+		 *
+		 * Use task_util_est() instead of task_util() so that a task
+		 * whose util_avg has partially decayed after a brief sleep is
+		 * not mistaken for a light task.  task_util_est() returns the
+		 * max of util_avg and the EWMA history, giving a stable estimate
+		 * of the task's true load from the moment it woke up.
+		 *
+		 * Also account for schedtune boost: a boosted task's effective
+		 * utilisation is max(task_util_est, boosted_task_util), which
+		 * can significantly exceed the raw PELT estimate.  Without this
+		 * a highly-boosted task with a modest task_util_est would look
+		 * light and be incorrectly pulled to the little cluster, where
+		 * it would immediately stall and generate more heat trying to
+		 * meet its performance target.
+		 */
+		util = max(task_util_est(p), boosted_task_util(p));
 		if (util > min_util)
 			continue;
 
@@ -677,6 +695,9 @@ static int select_proper_cpu(struct task_struct *p, int prev_cpu)
 {
 	int cpu;
 	unsigned long best_min_util = ULONG_MAX;
+	int best_idle_cpu = -1;
+	int best_idle_cstate = INT_MAX;
+	unsigned long best_idle_util = ULONG_MAX;
 	int best_cpu = -1;
 
 	for_each_cpu(cpu, cpu_active_mask) {
@@ -691,7 +712,15 @@ static int select_proper_cpu(struct task_struct *p, int prev_cpu)
 			continue;
 
 		for_each_cpu_and(i, tsk_cpus_allowed(p), cpu_coregroup_mask(cpu)) {
-			unsigned long capacity_orig = capacity_orig_of(i);
+			/*
+			 * Use capacity_of() (current thermal capacity) rather
+			 * than capacity_orig_of() (hardware max) so that CPUs
+			 * whose frequency has been reduced by thermal throttling
+			 * are correctly excluded when they cannot fit the task.
+			 * This avoids assigning work to hot CPUs, helping them
+			 * cool down and reducing system-wide lag.
+			 */
+			unsigned long capacity = capacity_of(i);
 			unsigned long wake_util, new_util;
 
 			wake_util = cpu_util_wake(i, p);
@@ -699,8 +728,38 @@ static int select_proper_cpu(struct task_struct *p, int prev_cpu)
 			new_util = max(new_util, boosted_task_util(p));
 
 			/* skip over-capacity cpu */
-			if (new_util > capacity_orig)
+			if (new_util > capacity)
 				continue;
+
+			/*
+			 * Prefer idle CPUs: waking a sleeping CPU from a
+			 * shallow C-state is faster than preempting a running
+			 * task and avoids unnecessary interference.  Among idle
+			 * CPUs prefer the shallowest idle state, and break ties
+			 * by choosing the less loaded CPU.
+			 */
+			if (idle_cpu(i)) {
+				int cstate = idle_get_state_idx(cpu_rq(i));
+
+				/*
+				 * Prefer shallowest idle state first.
+				 * Among CPUs at the same idle depth prefer
+				 * the one with lower utilisation — consistent
+				 * with pcf.c, service.c and band.c — so the
+				 * task gets the most headroom and avoids
+				 * unnecessary frequency scaling.
+				 */
+				if (cstate > best_idle_cstate)
+					continue;
+				if (cstate == best_idle_cstate &&
+				    wake_util >= best_idle_util)
+					continue;
+
+				best_idle_cstate = cstate;
+				best_idle_util = wake_util;
+				best_idle_cpu = i;
+				continue;
+			}
 
 			/*
 			 * Best target) lowest utilization among lowest-cap cpu
@@ -709,7 +768,7 @@ static int select_proper_cpu(struct task_struct *p, int prev_cpu)
 			 * does not require performance and the prev cpu is over-
 			 * utilized, so it should do load balancing without
 			 * considering energy side. Therefore, it selects cpu
-			 * with smallest cpapacity and the least utilization among
+			 * with smallest capacity and the least utilization among
 			 * cpu that fits the task.
 			 */
 			if (best_min_util < new_util)
@@ -720,6 +779,13 @@ static int select_proper_cpu(struct task_struct *p, int prev_cpu)
 		}
 
 		/*
+		 * If an idle CPU was found in this (smallest-fitting) coregroup
+		 * stop immediately — it is the optimal choice.
+		 */
+		if (cpu_selected(best_idle_cpu))
+			break;
+
+		/*
 		 * if it fails to find the best cpu in this coregroup, visit next
 		 * coregroup.
 		 */
@@ -727,10 +793,14 @@ static int select_proper_cpu(struct task_struct *p, int prev_cpu)
 			break;
 	}
 
+	/* Idle CPU is preferable over any active one */
+	if (cpu_selected(best_idle_cpu))
+		best_cpu = best_idle_cpu;
+
 	trace_ems_select_proper_cpu(p, best_cpu, best_min_util);
 
 	/*
-	 * if it fails to find the vest cpu, choosing any cpu is meaningless.
+	 * if it fails to find the best cpu, choosing any cpu is meaningless.
 	 * Return prev cpu.
 	 */
 	return cpu_selected(best_cpu) ? best_cpu : prev_cpu;
@@ -758,7 +828,7 @@ int exynos_wakeup_balance(struct task_struct *p, int prev_cpu, int sd_flag, int 
 
 	target_cpu = select_service_cpu(p);
 	if (cpu_selected(target_cpu)) {
-		strcpy(state, "service");
+		strlcpy(state, "service", sizeof(state));
 		goto out;
 	}
 
@@ -776,7 +846,7 @@ int exynos_wakeup_balance(struct task_struct *p, int prev_cpu, int sd_flag, int 
 	 */
 	target_cpu = ontime_task_wakeup(p, sync);
 	if (cpu_selected(target_cpu)) {
-		strcpy(state, "ontime migration");
+		strlcpy(state, "ontime migration", sizeof(state));
 		goto out;
 	}
 
@@ -784,15 +854,15 @@ int exynos_wakeup_balance(struct task_struct *p, int prev_cpu, int sd_flag, int 
 	 * Priority 2 : prefer-perf
 	 *
 	 * Prefer-perf is a function that operates on cgroup basis managed by
-	 * schedtune. When perfer-perf is set to 1, the tasks in the group are
+	 * schedtune. When prefer-perf is set to 1, the tasks in the group are
 	 * preferentially assigned to the performance cpu.
 	 *
 	 * It has a high priority because it is a function that is turned on
-	 * temporarily in scenario requiring reactivity(touch, app laucning).
+	 * temporarily in scenario requiring reactivity (touch, app launching).
 	 */
 	target_cpu = prefer_perf_cpu(p);
 	if (cpu_selected(target_cpu)) {
-		strcpy(state, "prefer-perf");
+		strlcpy(state, "prefer-perf", sizeof(state));
 		goto out;
 	}
 
@@ -811,7 +881,7 @@ int exynos_wakeup_balance(struct task_struct *p, int prev_cpu, int sd_flag, int 
 	 */
 	target_cpu = band_play_cpu(p);
 	if (cpu_selected(target_cpu)) {
-		strcpy(state, "task band");
+		strlcpy(state, "task band", sizeof(state));
 		goto out;
 	}
 
@@ -826,12 +896,12 @@ int exynos_wakeup_balance(struct task_struct *p, int prev_cpu, int sd_flag, int 
 	 * Typically, prefer-perf operates on groups that contains UX related tasks,
 	 * such as "top-app" or "foreground", so that major tasks are likely to be
 	 * assigned to performance cpu. On the other hand, global boost assigns
-	 * all tasks to performance cpu, which is not as effective as perfer-perf.
+	 * all tasks to performance cpu, which is not as effective as prefer-perf.
 	 * For this reason, global boost has a lower priority than prefer-perf.
 	 */
 	target_cpu = global_boosting(p);
 	if (cpu_selected(target_cpu)) {
-		strcpy(state, "global boosting");
+		strlcpy(state, "global boosting", sizeof(state));
 		goto out;
 	}
 
@@ -839,7 +909,7 @@ int exynos_wakeup_balance(struct task_struct *p, int prev_cpu, int sd_flag, int 
 	 * Priority 5 : prefer-idle
 	 *
 	 * Prefer-idle is a function that operates on cgroup basis managed by
-	 * schedtune. When perfer-idle is set to 1, the tasks in the group are
+	 * schedtune. When prefer-idle is set to 1, the tasks in the group are
 	 * preferentially assigned to the idle cpu.
 	 *
 	 * Prefer-idle has a smaller performance impact than the above. Therefore
@@ -847,7 +917,7 @@ int exynos_wakeup_balance(struct task_struct *p, int prev_cpu, int sd_flag, int 
 	 */
 	target_cpu = prefer_idle_cpu(p);
 	if (cpu_selected(target_cpu)) {
-		strcpy(state, "prefer-idle");
+		strlcpy(state, "prefer-idle", sizeof(state));
 		goto out;
 	}
 
@@ -859,7 +929,7 @@ int exynos_wakeup_balance(struct task_struct *p, int prev_cpu, int sd_flag, int 
 	 */
 	target_cpu = select_energy_cpu(p, prev_cpu, sd_flag, sync);
 	if (cpu_selected(target_cpu)) {
-		strcpy(state, "energy cpu");
+		strlcpy(state, "energy cpu", sizeof(state));
 		goto out;
 	}
 
@@ -872,7 +942,7 @@ int exynos_wakeup_balance(struct task_struct *p, int prev_cpu, int sd_flag, int 
 	 */
 	target_cpu = select_proper_cpu(p, prev_cpu);
 	if (cpu_selected(target_cpu))
-		strcpy(state, "proper cpu");
+		strlcpy(state, "proper cpu", sizeof(state));
 
 out:
 	trace_ems_wakeup_balance(p, target_cpu, state);
@@ -891,10 +961,25 @@ const struct cpumask *cpu_fastest_mask(void)
 
 static void cpumask_speed_init(void)
 {
+	int cpu, fastest_cpu = 0;
+	unsigned long max_cap = 0;
+
 	cpumask_clear(&slowest_mask);
 	cpumask_clear(&fastest_mask);
+
+	/* Slowest mask: always the coregroup containing CPU 0 */
 	cpumask_copy(&slowest_mask, cpu_coregroup_mask(0));
-	cpumask_copy(&fastest_mask, cpu_coregroup_mask(4));
+
+	/* Fastest mask: coregroup with the highest per-CPU capacity */
+	for_each_possible_cpu(cpu) {
+		unsigned long cap = capacity_orig_of(cpu);
+
+		if (cap > max_cap) {
+			max_cap = cap;
+			fastest_cpu = cpu;
+		}
+	}
+	cpumask_copy(&fastest_mask, cpu_coregroup_mask(fastest_cpu));
 }
 
 struct kobject *ems_kobj;
@@ -903,9 +988,25 @@ static int __init init_sysfs(void)
 {
 	cpumask_speed_init();
 	ems_kobj = kobject_create_and_add("ems", kernel_kobj);
+	if (!ems_kobj) {
+		pr_err("EMS: failed to create ems kobject\n");
+		return -ENOMEM;
+	}
 
 	lb_env = alloc_percpu(struct lb_env);
+	if (!lb_env) {
+		pr_err("EMS: failed to alloc lb_env\n");
+		kobject_put(ems_kobj);
+		return -ENOMEM;
+	}
+
 	lb_work = alloc_percpu(struct cpu_stop_work);
+	if (!lb_work) {
+		pr_err("EMS: failed to alloc lb_work\n");
+		free_percpu(lb_env);
+		kobject_put(ems_kobj);
+		return -ENOMEM;
+	}
 
 	return 0;
 }

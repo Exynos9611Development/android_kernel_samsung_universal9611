@@ -325,12 +325,15 @@ static int exynos_dm_parse_dt(struct device_node *np, struct exynos_dm_device *d
 	min_order = kzalloc(sizeof(int) * (dm->domain_count + 1), GFP_KERNEL);
 	if (!min_order) {
 		dev_err(dm->dev, "failed to allocate min_order\n");
+		kfree(dm->dm_data);
 		return -ENOMEM;
 	}
 
 	max_order = kzalloc(sizeof(int) * (dm->domain_count + 1), GFP_KERNEL);
 	if (!max_order) {
 		dev_err(dm->dev, "failed to allocate max_order\n");
+		kfree(min_order);
+		kfree(dm->dm_data);
 		return -ENOMEM;
 	}
 
@@ -346,15 +349,19 @@ static int exynos_dm_parse_dt(struct device_node *np, struct exynos_dm_device *d
 #ifdef CONFIG_EXYNOS_ACPM
 		const char *policy_use;
 #endif
-		if (of_property_read_u32(child_np, "dm-index", &index))
-			return -ENODEV;
+		if (of_property_read_u32(child_np, "dm-index", &index)) {
+			ret = -ENODEV;
+			goto err_out;
+		}
 
 		ret = exynos_dm_index_validate(index);
 		if (ret)
-			return ret;
+			goto err_out;
 
-		if (of_property_read_string(child_np, "available", &available))
-			return -ENODEV;
+		if (of_property_read_string(child_np, "available", &available)) {
+			ret = -ENODEV;
+			goto err_out;
+		}
 
 		if (!strcmp(available, "true")) {
 			dm->dm_data[index].dm_type = index;
@@ -376,11 +383,22 @@ static int exynos_dm_parse_dt(struct device_node *np, struct exynos_dm_device *d
 				dm->dm_data[index].policy_use = true;
 		}
 
-		if (of_property_read_u32(child_np, "cal_id", &dm->dm_data[index].cal_id))
-			return -ENODEV;
+		if (of_property_read_u32(child_np, "cal_id", &dm->dm_data[index].cal_id)) {
+			ret = -ENODEV;
+			goto err_out;
+		}
 #endif
 	}
 
+	return ret;
+
+err_out:
+	kfree(max_order);
+	max_order = NULL;
+	kfree(min_order);
+	min_order = NULL;
+	kfree(dm->dm_data);
+	dm->dm_data = NULL;
 	return ret;
 }
 #else

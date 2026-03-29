@@ -2212,6 +2212,8 @@ int fimc_is_csi_probe(void *parent, u32 instance)
 	return 0;
 
 err_reg_v4l2_subdev:
+	if (csi->workqueue)
+		destroy_workqueue(csi->workqueue);
 	devm_kfree(dev, subdev_csi);
 	device->subdev_csi = NULL;
 

@@ -74,6 +74,8 @@ static int request_spu_firmware(struct ssp_data *data, u8 **fw_buf)
 	file_buf = kvzalloc(file_size, GFP_KERNEL);
 	if (file_buf == NULL) {
 		ssp_errf("file buf kvzalloc error");
+		filp_close(filp, NULL);
+		set_fs(old_fs);
 		return 0;
 	}
 

@@ -1511,6 +1511,9 @@ static int sx9360_input_init(struct sx9360_p *data)
 	noti_input_dev = input_allocate_device();
 	if (!noti_input_dev) {
 		pr_err("[SX9360] : input_allocate_device failed\n");
+		sysfs_remove_group(&dev->dev.kobj, &sx9360_attribute_group);
+		sensors_remove_symlink(dev);
+		input_unregister_device(dev);
 		return -ENOMEM;
 	}
 

@@ -28,6 +28,7 @@
 #include <linux/export.h>
 #include <linux/mm.h>
 #include <linux/mm_types.h>
+#include <linux/vmstat.h>
 #include <linux/rbtree.h>
 #include <linux/slab.h>
 #include <linux/seq_file.h>
@@ -136,6 +137,12 @@ static struct ion_buffer *ion_buffer_create(struct ion_heap *heap,
 	nr_alloc_peak = atomic_long_read(&heap->total_allocated_peak);
 	if (nr_alloc_cur > nr_alloc_peak)
 		atomic_long_set(&heap->total_allocated_peak, nr_alloc_cur);
+	if (heap->type != ION_HEAP_TYPE_CARVEOUT && buffer->sg_table &&
+	    buffer->sg_table->sgl)
+		mod_node_page_state(
+			page_pgdat(sg_page(buffer->sg_table->sgl)),
+			NR_SLAB_UNRECLAIMABLE,
+			PAGE_ALIGN(len) >> PAGE_SHIFT);
 	return buffer;
 
 err1:
@@ -158,6 +165,12 @@ void ion_buffer_destroy(struct ion_buffer *buffer)
 		buffer->heap->ops->unmap_kernel(buffer->heap, buffer);
 	}
 	atomic_long_sub(buffer->size, &buffer->heap->total_allocated);
+	if (buffer->heap->type != ION_HEAP_TYPE_CARVEOUT &&
+	    buffer->sg_table && buffer->sg_table->sgl)
+		mod_node_page_state(
+			page_pgdat(sg_page(buffer->sg_table->sgl)),
+			NR_SLAB_UNRECLAIMABLE,
+			-(long)(PAGE_ALIGN(buffer->size) >> PAGE_SHIFT));
 	buffer->heap->ops->free(buffer);
 
 	ion_event_end(ION_EVENT_TYPE_FREE, buffer);
@@ -383,14 +396,20 @@ static void ion_dma_buf_kunmap(struct dma_buf *dmabuf, unsigned long offset,
 static void *ion_dma_buf_vmap(struct dma_buf *dmabuf)
 {
 	struct ion_buffer *buffer = dmabuf->priv;
+	void *vaddr;
 
-	if (buffer->heap->ops->map_kernel) {
-		mutex_lock(&buffer->lock);
-		ion_buffer_kmap_get(buffer);
+	if (!buffer->heap->ops->map_kernel)
+		return NULL;
+
+	mutex_lock(&buffer->lock);
+	vaddr = ion_buffer_kmap_get(buffer);
+	if (IS_ERR(vaddr)) {
 		mutex_unlock(&buffer->lock);
+		return vaddr;
 	}
+	mutex_unlock(&buffer->lock);
 
-	return buffer->vaddr;
+	return vaddr;
 }
 
 static void ion_dma_buf_vunmap(struct dma_buf *dmabuf, void *ptr)
@@ -537,6 +556,7 @@ struct dma_buf *__ion_alloc(size_t len, unsigned int heap_id_mask,
 	if (IS_ERR(dmabuf)) {
 		perrfn("failed to export dmabuf (err %ld)", -PTR_ERR(dmabuf));
 		_ion_buffer_destroy(buffer);
+		return dmabuf;
 	}
 
 	ion_event_end(ION_EVENT_TYPE_ALLOC, buffer);

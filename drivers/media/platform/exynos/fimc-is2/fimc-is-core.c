@@ -1225,7 +1225,7 @@ static int __init fimc_is_probe(struct platform_device *pdev)
 		ret = fimc_is_parse_dt(pdev);
 		if (ret) {
 			err("fimc_is_parse_dt is fail(%d)", ret);
-			return ret;
+			goto p_err1;
 		}
 
 		pdata = dev_get_platdata(&pdev->dev);

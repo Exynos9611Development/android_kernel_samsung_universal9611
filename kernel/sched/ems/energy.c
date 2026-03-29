@@ -75,8 +75,21 @@ unsigned int calculate_energy(struct task_struct *p, int target_cpu)
 	for_each_cpu(cpu, cpu_active_mask) {
 		util[cpu] = cpu_util_wake(cpu, p);
 
-		if (unlikely(cpu == target_cpu))
-			util[cpu] += task_util_est(p);
+		if (unlikely(cpu == target_cpu)) {
+			/*
+			 * Use max(task_util_est, boosted_task_util) so that
+			 * the energy cost reflects the capacity the task will
+			 * actually consume at runtime.  A schedtune-boosted
+			 * task needs boosted_task_util() capacity; ignoring
+			 * the boost underestimates the frequency needed on
+			 * the target CPU and biases the energy comparison
+			 * toward keeping the task on its current CPU.
+			 */
+			unsigned long tutil = task_util_est(p);
+
+			tutil = max(tutil, boosted_task_util(p));
+			util[cpu] += tutil;
+		}
 	}
 
 	for_each_cpu(cpu, cpu_active_mask) {
@@ -118,14 +131,16 @@ unsigned int calculate_energy(struct task_struct *p, int target_cpu)
 		 *    utilization of CFS reflects the performance of cpu,
 		 *    normalize the utilization to calculate the amount of
 		 *    cpu usuage that excludes cpu performance.
+		 *
+		 * Step 0 already built util[] correctly via cpu_util_wake():
+		 *   - util[task_cpu(p)] has the task's contribution removed
+		 *   - util[target_cpu]  has the task's contribution added
+		 * Do not re-adjust here; doing so would double-count the task
+		 * and produce wrong energy estimates for every migration
+		 * candidate, biasing the scheduler toward keeping tasks on
+		 * their current CPU even when migration would be beneficial.
 		 */
 		for_each_cpu(i, cpu_coregroup_mask(cpu)) {
-			if (i == task_cpu(p))
-				util[i] -= min_t(unsigned long, util[i], task_util_est(p));
-
-			if (i == target_cpu)
-				util[i] += task_util_est(p);
-
 			/* utilization with task exceeds max capacity of cpu */
 			if (util[i] >= capacity) {
 				util_sum += SCHED_CAPACITY_SCALE;
@@ -145,25 +160,78 @@ unsigned int calculate_energy(struct task_struct *p, int target_cpu)
 	return total_energy;
 }
 
-static int find_min_util_cpu(struct cpumask *mask, unsigned long task_util)
+static int find_min_util_cpu(struct cpumask *mask, struct task_struct *p,
+			     unsigned long task_util_val)
 {
 	unsigned long min_util = ULONG_MAX;
+	unsigned long best_idle_util = ULONG_MAX;
 	int min_util_cpu = -1;
+	int best_idle_cpu = -1;
+	int best_idle_cstate = INT_MAX;
 	int cpu;
 
 	/* Find energy efficient cpu in each coregroup. */
 	for_each_cpu_and(cpu, mask, cpu_active_mask) {
-		unsigned long capacity_orig = capacity_orig_of(cpu);
-		unsigned long util = cpu_util(cpu);
-
-		/* Skip over-capacity cpu */
-		if (util + task_util > capacity_orig)
-			continue;
+		/*
+		 * Use capacity_of() rather than capacity_orig_of() for the
+		 * over-capacity check.  capacity_of() reflects the CPU's
+		 * current dynamic capacity, which can be reduced below the
+		 * hardware maximum by thermal throttling or power-capping.
+		 * With PELT frequency invariance the util values (cpu_util_wake,
+		 * task_util_est) are already frequency-scaled, so comparing
+		 * against the current capacity_of() correctly avoids placing
+		 * new tasks on thermally-hot CPUs that cannot service them at
+		 * full speed — reducing both heat and lag.
+		 */
+		unsigned long capacity = capacity_of(cpu);
+		/*
+		 * Use cpu_util_wake() so that the task's blocked contribution
+		 * is removed from its current CPU's utilisation estimate.
+		 * For all other CPUs cpu_util_wake() is equivalent to
+		 * cpu_util(), so this does not change their accounting.
+		 */
+		unsigned long util = cpu_util_wake(cpu, p);
+		unsigned long new_util = util + task_util_val;
 
 		/*
-		 * Choose min util cpu within coregroup as candidates.
+		 * Account for schedtune boost: a boosted task needs at least
+		 * boosted_task_util() capacity, regardless of the raw PELT
+		 * estimate.  This matches the capacity check used in every
+		 * other EMS CPU selector (band.c, pcf.c, service.c, etc.).
+		 */
+		new_util = max(new_util, boosted_task_util(p));
+
+		/* Skip over-capacity cpu */
+		if (new_util > capacity)
+			continue;
+
+		if (idle_cpu(cpu)) {
+			/*
+			 * Prefer idle CPUs for energy efficiency: placing a
+			 * task on an idle CPU avoids raising the frequency of
+			 * an already-busy CPU.  Among idle CPUs prefer the
+			 * shallowest C-state (fastest wake-up), and break
+			 * ties by choosing the lower-util CPU — consistent
+			 * with every other EMS CPU selector.
+			 */
+			int cstate = idle_get_state_idx(cpu_rq(cpu));
+
+			if (cstate > best_idle_cstate)
+				continue;
+			if (cstate == best_idle_cstate &&
+			    util >= best_idle_util)
+				continue;
+
+			best_idle_cstate = cstate;
+			best_idle_util = util;
+			best_idle_cpu = cpu;
+			continue;
+		}
+
+		/*
+		 * Choose min util cpu within coregroup as fallback.
 		 * Choosing a min util cpu is most likely to handle
-		 * wake-up task without increasing the frequecncy.
+		 * wake-up task without increasing the frequency.
 		 */
 		if (util < min_util) {
 			min_util = util;
@@ -171,7 +239,8 @@ static int find_min_util_cpu(struct cpumask *mask, unsigned long task_util)
 		}
 	}
 
-	return min_util_cpu;
+	/* Idle CPU is always preferable over an active one */
+	return cpu_selected(best_idle_cpu) ? best_idle_cpu : min_util_cpu;
 }
 
 static int select_eco_cpu(struct eco_env *eenv)
@@ -209,7 +278,7 @@ static int select_eco_cpu(struct eco_env *eenv)
 		 * Select the best target, which is expected to consume the
 		 * lowest energy among the min util cpu for each coregroup.
 		 */
-		energy_cpu = find_min_util_cpu(&mask, task_util);
+		energy_cpu = find_min_util_cpu(&mask, eenv->p, task_util);
 		if (cpu_selected(energy_cpu)) {
 			unsigned int energy = calculate_energy(eenv->p, energy_cpu);
 
@@ -266,10 +335,13 @@ int select_energy_cpu(struct task_struct *p, int prev_cpu, int sd_flag, int sync
 
 	/*
 	 * We cannot do energy-aware wakeup placement sensibly for tasks
-	 * with 0 utilization, so let them be placed according to the normal
-	 * strategy.
+	 * with 0 utilization.  Use task_util_est() so that tasks which have
+	 * run before (e.g. camera threads, recently-closed apps) use their
+	 * UTIL_EST history instead of a decayed util_avg, ensuring they get
+	 * energy-aware placement immediately on wake-up rather than falling
+	 * back to the lowest-capacity CPU.
 	 */
-	if (!task_util(p))
+	if (!task_util_est(p))
 		return -1;
 
 	if (sysctl_sched_sync_hint_enable && sync)
@@ -508,17 +580,22 @@ static int __init init_sched_energy_data(void)
 		cpu_phandle = of_parse_phandle(cpu_node, "sched-energy-data", 0);
 		if (!cpu_phandle) {
 			pr_warn("CPU device node has no sched-energy-data\n");
+			of_node_put(cpu_node);
 			return -ENODATA;
 		}
 
 		table = &per_cpu(energy_table, cpu);
 		if (of_property_read_u32(cpu_phandle, "capacity-mips", &table->mips)) {
 			pr_warn("No capacity-mips data\n");
+			of_node_put(cpu_phandle);
+			of_node_put(cpu_node);
 			return -ENODATA;
 		}
 
 		if (of_property_read_u32(cpu_phandle, "power-coefficient", &table->coefficient)) {
 			pr_warn("No power-coefficient data\n");
+			of_node_put(cpu_phandle);
+			of_node_put(cpu_node);
 			return -ENODATA;
 		}
 

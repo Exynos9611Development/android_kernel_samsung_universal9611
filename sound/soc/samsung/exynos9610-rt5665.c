@@ -620,11 +620,15 @@ out:
 static int read_codec(struct device_node *np, struct device *dev,
 		struct snd_soc_dai_link *dai_link)
 {
+	int ret;
+
 	np = of_get_child_by_name(np, "codec");
 	if (!np)
 		return -ENOENT;
 
-	return snd_soc_of_get_dai_link_codecs(dev, np, dai_link);
+	ret = snd_soc_of_get_dai_link_codecs(dev, np, dai_link);
+	of_node_put(np);
+	return ret;
 }
 
 static void control_xclkout(bool on)

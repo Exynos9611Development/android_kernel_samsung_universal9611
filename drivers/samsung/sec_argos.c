@@ -613,7 +613,7 @@ static int argos_pm_qos_notify(struct notifier_block *nfb,
 	struct argos *cnode;
 
 	type = (speedtype & TYPE_MASK_BIT) - 1;
-	if (type < 0 || type > argos_pdata->ndevice) {
+	if (type < 0 || type >= argos_pdata->ndevice) {
 		pr_err("There is no type for devices type[%d], ndevice[%d]\n",
 		       type, argos_pdata->ndevice);
 		return NOTIFY_BAD;
@@ -807,15 +807,15 @@ static int load_table_items(struct device_node *np, struct boost_table *t)
 
 	status = of_get_property(np, "irq_affinity", &len);
 	if (status && len > 0 && !strcmp(status, "enable"))
-		t->items[HMP_BOOST_EN] = 1;
-	else
-		t->items[HMP_BOOST_EN] = 0;
-
-	status = of_get_property(np, "hmp_boost", &len);
-	if (status && len > 0 && !strcmp(status, "enable"))
 		t->items[IRQ_AFFINITY_EN] = 1;
 	else
 		t->items[IRQ_AFFINITY_EN] = 0;
+
+	status = of_get_property(np, "hmp_boost", &len);
+	if (status && len > 0 && !strcmp(status, "enable"))
+		t->items[HMP_BOOST_EN] = 1;
+	else
+		t->items[HMP_BOOST_EN] = 0;
 
 	return 0;
 }
@@ -948,9 +948,44 @@ static int argos_probe(struct platform_device *pdev)
 static int argos_remove(struct platform_device *pdev)
 {
 	struct argos_platform_data *pdata = platform_get_drvdata(pdev);
+	int i;
 
 	if (!pdata || !argos_pdata)
 		return 0;
+
+	for (i = 0; i < pdata->ndevice; i++) {
+		struct argos_task_affinity *tpos, *tnext;
+		struct argos_irq_affinity *ipos, *inext;
+		LIST_HEAD(task_free_list);
+		LIST_HEAD(irq_free_list);
+
+		spin_lock(&argos_task_lock);
+		list_for_each_entry_safe(tpos, tnext,
+				&pdata->devices[i].task_affinity_list, entry) {
+			list_del(&tpos->entry);
+			list_add(&tpos->entry, &task_free_list);
+		}
+		spin_unlock(&argos_task_lock);
+
+		list_for_each_entry_safe(tpos, tnext, &task_free_list, entry) {
+			list_del(&tpos->entry);
+			kfree(tpos);
+		}
+
+		spin_lock(&argos_irq_lock);
+		list_for_each_entry_safe(ipos, inext,
+				&pdata->devices[i].irq_affinity_list, entry) {
+			list_del(&ipos->entry);
+			list_add(&ipos->entry, &irq_free_list);
+		}
+		spin_unlock(&argos_irq_lock);
+
+		list_for_each_entry_safe(ipos, inext, &irq_free_list, entry) {
+			list_del(&ipos->entry);
+			kfree(ipos);
+		}
+	}
+
 	pm_qos_remove_notifier(PM_QOS_NETWORK_THROUGHPUT, &pdata->pm_qos_nfb);
 	unregister_reboot_notifier(&argos_cpuidle_reboot_nb);
 

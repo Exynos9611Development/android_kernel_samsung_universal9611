@@ -22,6 +22,8 @@ int select_perf_cpu(struct task_struct *p)
 	unsigned long best_perf_cap_orig = 0;
 	unsigned long max_spare_cap = 0;
 	int best_perf_cstate = INT_MAX;
+	unsigned long best_perf_idle_util = ULONG_MAX;
+	unsigned long new_util;
 	int best_perf_cpu = -1;
 	int backup_cpu = -1;
 
@@ -39,10 +41,14 @@ int select_perf_cpu(struct task_struct *p)
 		 * To maximize performance, the idle cpu with the highest
 		 * performance is selected first. If there are more than two idle
 		 * cpus with the highest performance, choose the cpu with the
-		 * shallowest idle state for fast reactivity.
+		 * shallowest idle state for fast reactivity.  Among CPUs at the
+		 * same idle depth, prefer the one with the lower utilisation so
+		 * the new task gets the most headroom and the frequency does not
+		 * need to scale up as quickly.
 		 */
 		if (idle_cpu(cpu)) {
 			int idle_idx = idle_get_state_idx(cpu_rq(cpu));
+			unsigned long util = cpu_util_wake(cpu, p);
 
 			/* find biggest capacity cpu */
 			if (capacity_orig < best_perf_cap_orig)
@@ -50,19 +56,30 @@ int select_perf_cpu(struct task_struct *p)
 
 			/*
 			 * if we find a better-performing cpu, re-initialize
-			 * best_perf_cstate
+			 * best_perf_cstate and best_perf_idle_util
 			 */
 			if (capacity_orig > best_perf_cap_orig) {
 				best_perf_cap_orig = capacity_orig;
 				best_perf_cstate = INT_MAX;
+				best_perf_idle_util = ULONG_MAX;
 			}
 
 			/* find shallowest idle state cpu */
-			if (idle_idx >= best_perf_cstate)
+			if (idle_idx > best_perf_cstate)
+				continue;
+
+			/*
+			 * At the same idle depth, prefer the less loaded CPU.
+			 * This distributes the work evenly across idle CPUs in
+			 * the biggest cluster and avoids frequency spikes.
+			 */
+			if (idle_idx == best_perf_cstate &&
+			    util >= best_perf_idle_util)
 				continue;
 
 			/* Keep track of best idle CPU */
 			best_perf_cstate = idle_idx;
+			best_perf_idle_util = util;
 			best_perf_cpu = cpu;
 			continue;
 		}
@@ -75,8 +92,18 @@ int select_perf_cpu(struct task_struct *p)
 		 * the cpu with the biggest spare capacity to handle the most
 		 * computations. Since a high performance cpu has a large capacity,
 		 * cpu having a high performance is likely to be selected.
+		 *
+		 * Use task_util_est() rather than a raw util delta so that tasks
+		 * with UTIL_EST history (e.g. camera threads being rescheduled)
+		 * are accounted for correctly.  Also honour boosted_task_util()
+		 * so that a schedtune-boosted task is not placed on a CPU whose
+		 * effective capacity would be exceeded after the boost is applied.
 		 */
 		wake_util = cpu_util_wake(cpu, p);
+		new_util = wake_util + task_util_est(p);
+		new_util = max(new_util, boosted_task_util(p));
+		if (new_util > capacity_orig)
+			continue;
 		if ((capacity_orig - wake_util) < max_spare_cap)
 			continue;
 

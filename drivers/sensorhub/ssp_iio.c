@@ -294,6 +294,8 @@ void report_camera_lux_data(struct ssp_data *data, int lux)
 void report_meta_data(struct ssp_data *data, struct sensor_value *s)
 {
 	char *meta_event = kzalloc(data->info[s->meta_data.sensor].report_data_len, GFP_KERNEL);
+	if (!meta_event)
+		return;
 
 	ssp_infof("what: %d, sensor: %d", s->meta_data.what, s->meta_data.sensor);
 
@@ -428,7 +430,7 @@ err_register_device:
 	iio_kfifo_free(indio_dev->buffer);
 err_config_ring:
 	ssp_err("failed to configure %s buffer\n", indio_dev->name);
-	iio_device_unregister(indio_dev);
+	iio_device_free(indio_dev);
 err_alloc:
 	ssp_err("fail to allocate memory for iio %s device", device_name);
 	return NULL;
@@ -490,7 +492,10 @@ void remove_indio_dev(struct ssp_data *data)
 
 	for (type = SENSOR_TYPE_MAX - 1; type >= 0; type--) {
 		if (data->indio_devs[type]) {
+			iio_kfifo_free(data->indio_devs[type]->buffer);
 			iio_device_unregister(data->indio_devs[type]);
+			iio_device_free(data->indio_devs[type]);
+			data->indio_devs[type] = NULL;
 		}
 	}
 }

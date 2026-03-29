@@ -329,7 +329,7 @@ static int __mfc_init_enc_ctx(struct mfc_ctx *ctx)
 
 fail_enc_init:
 	__mfc_deinit_enc_ctx(ctx);
-	return 0;
+	return ret;
 }
 
 static int __mfc_init_instance(struct mfc_dev *dev, struct mfc_ctx *ctx)
@@ -1580,7 +1580,6 @@ static int mfc_remove(struct platform_device *pdev)
 	iounmap(dev->regs_base);
 	release_mem_region(dev->mfc_mem->start, resource_size(dev->mfc_mem));
 	mfc_pm_final(dev);
-	kfree(dev);
 	dev_dbg(&pdev->dev, "%s--\n", __func__);
 	return 0;
 }

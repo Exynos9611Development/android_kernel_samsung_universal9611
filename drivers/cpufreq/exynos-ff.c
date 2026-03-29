@@ -194,30 +194,40 @@ static int alloc_driver(void)
 	dn = of_find_node_by_type(NULL, "exynos-ff");
 	if (!dn) {
 		pr_err("Failed to initialize eff driver\n");
-		return -ENODATA;
+		ret = -ENODATA;
+		goto free_driver;
 	}
 
 	/* Get boost frequency threshold */
 	ret = of_property_read_u32(dn, "boost-threshold", &eff_driver->boost_threshold);
 	if (ret)
-		return ret;
+		goto free_driver;
 
 	/* Get cal id to get current frequency */
 	ret = of_property_read_u32(dn, "cal-id", &eff_driver->cal_id);
 	if (ret)
-		return ret;
+		goto free_driver;
 
 	/* Get cpumask which belongs to domain */
 	ret = of_property_read_string(dn, "sibling-cpus", &buf);
 	if (ret)
-		return ret;
+		goto free_driver;
 
 	cpulist_parse(buf, &eff_driver->cpus);
 	cpumask_and(&eff_driver->cpus, &eff_driver->cpus, cpu_online_mask);
-	if (cpumask_weight(&eff_driver->cpus) == 0)
-		return -ENODEV;
+	if (cpumask_weight(&eff_driver->cpus) == 0) {
+		ret = -ENODEV;
+		goto free_driver;
+	}
 
+	of_node_put(dn);
 	return 0;
+
+free_driver:
+	of_node_put(dn);
+	kfree(eff_driver);
+	eff_driver = NULL;
+	return ret;
 }
 
 static int __init exynos_ff_init(void)

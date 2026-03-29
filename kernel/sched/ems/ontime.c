@@ -189,6 +189,7 @@ ontime_select_target_cpu(struct task_struct *p, struct cpumask *fit_cpus)
 		int i;
 		int best_cpu = -1, backup_cpu = -1;
 		unsigned int min_exit_latency = UINT_MAX;
+		unsigned long best_idle_util = ULONG_MAX;
 		unsigned long min_util = ULONG_MAX;
 		unsigned long coverage_util;
 
@@ -207,20 +208,55 @@ ontime_select_target_cpu(struct task_struct *p, struct cpumask *fit_cpus)
 
 			if (idle_cpu(i)) {
 				/* 1. Find shallowest idle_cpu */
-				struct cpuidle_state *idle = idle_get_state(cpu_rq(cpu));
+				struct cpuidle_state *idle = idle_get_state(cpu_rq(i));
+				unsigned long idle_util;
 
 				if (!idle) {
 					best_cpu = i;
 					break;
 				}
 
-				if (idle->exit_latency < min_exit_latency) {
+				/*
+				 * Prefer the shallowest C-state for fastest
+				 * wake-up latency.  Among CPUs at the same idle
+				 * depth prefer the one with lower utilisation so
+				 * that the migrated task has the most headroom
+				 * and the CPU frequency does not need to ramp
+				 * up immediately — consistent with the fix
+				 * applied to pcf.c and service.c.
+				 */
+				idle_util = cpu_util_wake(i, p);
+				if (idle->exit_latency < min_exit_latency ||
+				    (idle->exit_latency == min_exit_latency &&
+				     idle_util < best_idle_util)) {
 					min_exit_latency = idle->exit_latency;
+					best_idle_util = idle_util;
 					best_cpu = i;
 				}
 			} else {
 				/* 2. Find cpu that have to spare */
-				unsigned long new_util = task_util(p) + cpu_util_wake(i, p);
+				/*
+				 * Use boosted_task_util() rather than
+				 * task_util_est() so that the coverage check
+				 * accounts for the task's effective utilisation
+				 * after the schedtune boost margin is applied.
+				 * task_util_est() may underestimate the load
+				 * for a boosted task: if only task_util_est is
+				 * used, a task with a small raw PELT estimate
+				 * but a large boost margin could be placed on
+				 * an active CPU that is already near its
+				 * coverage limit, causing an immediate
+				 * follow-up re-migration once the boosted
+				 * utilisation is reflected.
+				 *
+				 * Since boosted_task_util() >= task_util_est()
+				 * this is a safe, conservative change: the
+				 * coverage threshold is evaluated with a
+				 * higher (more correct) task utilisation,
+				 * so heavily-loaded active CPUs are skipped
+				 * more aggressively for boosted ontime tasks.
+				 */
+				unsigned long new_util = boosted_task_util(p) + cpu_util_wake(i, p);
 
 				if (new_util * 100 >= coverage_util)
 					continue;
@@ -486,7 +522,7 @@ void ontime_migration(void)
 
 		/* Task in big cores don't be ontime migrated. */
 		if (cpumask_test_cpu(cpu, cpu_coregroup_mask(MAX_CAPACITY_CPU)))
-			break;
+			continue;
 
 		raw_spin_lock_irqsave(&rq->lock, flags);
 
@@ -656,7 +692,24 @@ int ontime_can_migration(struct task_struct *p, int dst_cpu)
 	 */
 	if (cpu_rq(src_cpu)->nr_running > 1) {
 		unsigned long cpu_util = cpu_util_wake(src_cpu, p);
-		unsigned long util = task_util(p);
+		/*
+		 * cpu_util_wake() already subtracts task_util_est(p) from the
+		 * CPU's utilisation.  Use task_util_est() here too so that both
+		 * sides of the comparison are consistent.
+		 *
+		 * If task_util() (raw PELT util_avg) is used instead, a task
+		 * whose util_avg has partially decayed after a brief sleep will
+		 * appear lighter than it really is, making cpu_util > util
+		 * trivially true and allowing the task to be shed downward even
+		 * when the source CPU does not truly have excess load from other
+		 * tasks.  With task_util_est() the comparison is:
+		 *
+		 *   cpu_util_wake (= total_util - task_util_est) > task_util_est
+		 *
+		 * i.e., only permit downward migration when the CPU carries more
+		 * than twice the task's expected utilisation in other work.
+		 */
+		unsigned long util = task_util_est(p);
 		unsigned long coverage_ratio = get_coverage_ratio(src_cpu);
 
 		if ((cpu_util * 100 >= capacity_orig_of(src_cpu) * coverage_ratio)
@@ -710,6 +763,7 @@ void ontime_update_load_avg(u64 delta, int cpu, unsigned long weight, struct sch
 		return;
 
 	oa->load_avg = div_u64(oa->load_sum, LOAD_AVG_MAX - 1024 + oa->period_contrib);
+	oa->load_avg = min_t(unsigned long, oa->load_avg, SCHED_CAPACITY_SCALE);
 	ontime_update_next_balance(cpu, oa);
 }
 
@@ -759,7 +813,7 @@ static ssize_t store_##_name(struct kobject *k, const char *buf, size_t count)	\
 	unsigned int val;							\
 	struct ontime_cond *cond = container_of(k, struct ontime_cond, kobj);	\
 										\
-	if (!sscanf(buf, "%u", &val))						\
+	if (sscanf(buf, "%u", &val) != 1)					\
 		return -EINVAL;							\
 										\
 	val = val > _max ? _max : val;						\
@@ -831,8 +885,10 @@ static int __init ontime_sysfs_init(void)
 
 		ret = kobject_init_and_add(&curr->kobj, &ktype_ontime,
 				ontime_kobj, "coregroup%d", curr->coregroup);
-		if (ret)
+		if (ret) {
+			kobject_put(ontime_kobj);
 			goto out;
+		}
 	}
 
 	return 0;
@@ -874,14 +930,14 @@ parse_ontime(struct device_node *dn, struct ontime_cond *cond, int cnt)
 	snprintf(name, sizeof(name), "coregroup%d", cnt);
 	coregroup = of_get_child_by_name(ontime, name);
 	if (!coregroup)
-		goto disable;
+		goto disable_put_ontime;
 	cond->coregroup = cnt;
 
 	capacity = get_cpu_max_capacity(cpumask_first(&cond->cpus));
 
 	/* If capacity of this coregroup is 0, disable ontime of this coregroup */
 	if (capacity == 0)
-		goto disable;
+		goto disable_put_both;
 
 	/* If any of ontime parameter isn't, disable ontime of this coregroup */
 	res |= of_property_read_s32(coregroup, "upper-boundary", &prop);
@@ -894,11 +950,17 @@ parse_ontime(struct device_node *dn, struct ontime_cond *cond, int cnt)
 	cond->coverage_ratio = prop;
 
 	if (res)
-		goto disable;
+		goto disable_put_both;
 
 	cond->enabled = true;
+	of_node_put(coregroup);
+	of_node_put(ontime);
 	return;
 
+disable_put_both:
+	of_node_put(coregroup);
+disable_put_ontime:
+	of_node_put(ontime);
 disable:
 	pr_err("ONTIME(%s): failed to parse ontime node\n", __func__);
 	cond->enabled = false;
@@ -927,6 +989,17 @@ static int __init init_ontime(void)
 			continue;
 
 		cond = kzalloc(sizeof(struct ontime_cond), GFP_KERNEL);
+		if (!cond) {
+			struct ontime_cond *tmp, *n;
+
+			pr_err("ontime: failed to allocate ontime_cond\n");
+			list_for_each_entry_safe(tmp, n, &cond_list, list) {
+				list_del(&tmp->list);
+				kfree(tmp);
+			}
+			of_node_put(dn);
+			return -ENOMEM;
+		}
 
 		cpumask_copy(&cond->cpus, cpu_coregroup_mask(cpu));
 

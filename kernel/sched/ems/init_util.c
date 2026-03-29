@@ -86,7 +86,7 @@ static ssize_t store_initial_util_type(struct kobject *kobj,
 {
         long input;
 
-        if (!sscanf(buf, "%ld", &input))
+        if (sscanf(buf, "%ld", &input) != 1)
                 return -EINVAL;
 
         input = input < 0 ? 0 : input;
@@ -109,10 +109,10 @@ static ssize_t store_initial_util_ratio(struct kobject *kobj,
 {
         long input;
 
-        if (!sscanf(buf, "%ld", &input))
+        if (sscanf(buf, "%ld", &input) != 1)
                 return -EINVAL;
 
-        init_util_ratio = !!input;
+        init_util_ratio = input;
 
         return count;
 }
@@ -141,8 +141,10 @@ static int __init init_util_sysfs(void)
 	if (!kobj)
 		return -EINVAL;
 
-	if (sysfs_create_group(kobj, &attr_group))
+	if (sysfs_create_group(kobj, &attr_group)) {
+		kobject_put(kobj);
 		return -EINVAL;
+	}
 
 	return 0;
 }

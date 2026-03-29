@@ -114,8 +114,10 @@ static void g2d_set_device_frequency(struct g2d_context *g2d_ctx,
 			fmt = perf_index_fmt(layer);
 			sc = perf_index_sc(layer);
 
-			if (fmt == PPC_FMT)
+			if (fmt == PPC_FMT) {
+				g2d_pm_qos_remove_devfreq(&g2d_ctx->req);
 				return;
+			}
 
 			cycle += max(crop, window) / ppc[fmt][rot][sc];
 

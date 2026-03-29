@@ -1625,6 +1625,8 @@ static void dsim_parse_lcd_info(struct dsim_device *dsim)
 		dsim->continuous_underrun_max = 0;
 		dsim_info("udr_max_num not found\n");
 	}
+
+	of_node_put(node);
 }
 
 static int dsim_parse_dt(struct dsim_device *dsim, struct device *dev)
@@ -1875,7 +1877,6 @@ static int dsim_probe(struct platform_device *pdev)
 	return 0;
 
 err_dt:
-	kfree(dsim);
 err:
 	return ret;
 }

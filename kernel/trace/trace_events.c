@@ -2006,6 +2006,7 @@ event_create_dir(struct dentry *parent, struct trace_event_file *file)
 		if (ret < 0) {
 			pr_warn("Could not initialize trace point events/%s\n",
 				name);
+			trace_destroy_fields(call);
 			return -1;
 		}
 	}
@@ -2283,12 +2284,17 @@ static int
 __trace_add_new_event(struct trace_event_call *call, struct trace_array *tr)
 {
 	struct trace_event_file *file;
+	int ret;
 
 	file = trace_create_new_event(call, tr);
 	if (!file)
 		return -ENOMEM;
 
-	return event_create_dir(tr->event_dir, file);
+	ret = event_create_dir(tr->event_dir, file);
+	if (ret < 0)
+		remove_event_file_dir(file);
+
+	return ret;
 }
 
 /*

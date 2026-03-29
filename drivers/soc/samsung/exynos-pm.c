@@ -564,6 +564,8 @@ static void parse_dt_wakeup_stat_names(struct device_node *np)
 		if (size <= 0 || size > 32) {
 			pr_err("%s: failed to get wakeup_stat name cnt(%d)\n",
 					__func__, size);
+			kfree(pm_info->ws_names);
+			pm_info->ws_names = NULL;
 			return;
 		}
 
@@ -572,6 +574,8 @@ static void parse_dt_wakeup_stat_names(struct device_node *np)
 		if (ret < 0) {
 			pr_err("%s: failed to read wakeup_stat name(%d)\n",
 					__func__, ret);
+			kfree(pm_info->ws_names);
+			pm_info->ws_names = NULL;
 			return;
 		}
 

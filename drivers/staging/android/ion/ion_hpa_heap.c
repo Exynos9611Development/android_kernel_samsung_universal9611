@@ -198,6 +198,10 @@ struct ion_heap *ion_hpa_heap_create(struct ion_platform_heap *data,
 	heap->heap.ops = &ion_hpa_ops;
 	heap->heap.type = ION_HEAP_TYPE_HPA;
 	heap->heap.name = kstrndup(data->name, MAX_HEAP_NAME - 1, GFP_KERNEL);
+	if (!heap->heap.name) {
+		kfree(heap);
+		return ERR_PTR(-ENOMEM);
+	}
 	heap->heap.flags = ION_HEAP_FLAG_DEFER_FREE;
 	heap->order = get_order(data->align);
 	heap->protection_id = data->id;

@@ -32,37 +32,109 @@ static struct task_band *lookup_band(struct task_struct *p)
 int band_play_cpu(struct task_struct *p)
 {
 	struct task_band *band;
-	int cpu, min_cpu = -1;
+	unsigned long task_util_val = task_util_est(p);
+	int cpu;
+	int best_idle_cpu = -1;
+	int min_cpu = -1;
 	unsigned long min_util = ULONG_MAX;
+	int best_idle_cstate = INT_MAX;
+	unsigned long best_idle_util = ULONG_MAX;
 
 	band = lookup_band(p);
 	if (!band)
 		return -1;
 
 	for_each_cpu(cpu, &band->playable_cpus) {
-		if (!cpu_rq(cpu)->nr_running)
-			return cpu;
+		unsigned long capacity_orig = capacity_orig_of(cpu);
+		unsigned long wake_util = cpu_util_wake(cpu, p);
+		unsigned long new_util = wake_util + task_util_val;
 
-		if (cpu_util(cpu) < min_util) {
+		new_util = max(new_util, boosted_task_util(p));
+
+		/* Skip CPUs that cannot accommodate this task */
+		if (new_util > capacity_orig)
+			continue;
+
+		if (idle_cpu(cpu)) {
+			/*
+			 * Prefer the shallowest idle state so the CPU
+			 * wakes up fastest and the task starts sooner.
+			 * Among CPUs at the same idle depth prefer the
+			 * one with the lower utilisation — consistent
+			 * with pcf.c and service.c — so that video
+			 * threads land on the most headroom-rich CPU
+			 * and avoid unnecessary frequency ramp-ups.
+			 */
+			int cstate = idle_get_state_idx(cpu_rq(cpu));
+
+			if (cstate > best_idle_cstate)
+				continue;
+			if (cstate == best_idle_cstate &&
+			    wake_util >= best_idle_util)
+				continue;
+
+			best_idle_cstate = cstate;
+			best_idle_util = wake_util;
+			best_idle_cpu = cpu;
+			continue;
+		}
+
+		/*
+		 * Use cpu_util_wake() + task_util_est() for the non-idle
+		 * candidate rather than plain cpu_util() so that the task's
+		 * own blocked contribution is not double-counted on prev_cpu.
+		 */
+		if (new_util < min_util) {
 			min_cpu = cpu;
-			min_util = cpu_util(cpu);
+			min_util = new_util;
 		}
 	}
+
+	/* Idle CPU wins over an active one */
+	if (cpu_selected(best_idle_cpu))
+		return best_idle_cpu;
 
 	return min_cpu;
 }
 
 static void pick_playable_cpus(struct task_band *band)
 {
+	int cpu, last_valid_cpu = -1;
+
 	cpumask_clear(&band->playable_cpus);
 
-	/* pick condition should be fixed */
-	if (band->util < 442) // LIT up-threshold * 2
-		cpumask_and(&band->playable_cpus, cpu_online_mask, cpu_coregroup_mask(0));
-	else if (band->util < 1260) // MED up-threshold * 2
-		cpumask_and(&band->playable_cpus, cpu_online_mask, cpu_coregroup_mask(4));
-	else
-		cpumask_and(&band->playable_cpus, cpu_online_mask, cpu_coregroup_mask(6));
+	/*
+	 * Find the first coregroup whose total capacity is large enough to
+	 * accommodate twice the band's current utilization.  Using 2x gives
+	 * the same headroom as the previous hard-coded "up-threshold * 2"
+	 * thresholds while being derived from the actual hardware topology
+	 * rather than from device-specific magic numbers.
+	 */
+	for_each_cpu(cpu, cpu_active_mask) {
+		unsigned long cpu_capacity;
+		int ncpus;
+
+		if (cpu != cpumask_first(cpu_coregroup_mask(cpu)))
+			continue;
+
+		cpu_capacity = get_cpu_max_capacity(cpu);
+		if (!cpu_capacity)
+			continue;
+
+		last_valid_cpu = cpu;
+		ncpus = cpumask_weight(cpu_coregroup_mask(cpu));
+
+		if ((band->util << 1) <= cpu_capacity * ncpus) {
+			cpumask_and(&band->playable_cpus, cpu_online_mask,
+				    cpu_coregroup_mask(cpu));
+			return;
+		}
+	}
+
+	/* Fallback: use the fastest available coregroup */
+	if (last_valid_cpu >= 0)
+		cpumask_and(&band->playable_cpus, cpu_online_mask,
+			    cpu_coregroup_mask(last_valid_cpu));
 }
 
 static unsigned long out_of_time = 100000000;	/* 100ms */
@@ -76,7 +148,17 @@ static void __update_band(struct task_band *band, unsigned long now)
 	list_for_each_entry(task, &band->members, band_members) {
 		if (now - task->se.avg.last_update_time > out_of_time)
 			continue;
-		util_sum += task_util(task);
+		/*
+		 * Use task_util_est() rather than task_util() so that the
+		 * band's utilization accounts for UTIL_EST history.  A band
+		 * member that has just woken up may have a decayed util_avg
+		 * close to zero, causing pick_playable_cpus() to assign the
+		 * band to the smallest coregroup and then immediately stall
+		 * when the task's true load is revealed.  task_util_est() uses
+		 * the EWMA / enqueued history and gives a stable, higher
+		 * estimate from the first wake-up.
+		 */
+		util_sum += task_util_est(task);
 	}
 
 	band->util = util_sum;
@@ -84,7 +166,9 @@ static void __update_band(struct task_band *band, unsigned long now)
 
 	pick_playable_cpus(band);
 
-	task = list_first_entry(&band->members, struct task_struct, band_members);
+	if (list_empty(&band->members))
+		return;
+
 	trace_ems_update_band(band->id, band->util, band->member_count,
 		*(unsigned int *)cpumask_bits(&band->playable_cpus));
 }
@@ -94,7 +178,7 @@ static int update_interval = 20000000;	/* 20ms */
 void update_band(struct task_struct *p, long old_util)
 {
 	struct task_band *band;
-	unsigned long now = cpu_rq(0)->clock_task;
+	unsigned long now = (unsigned long)local_clock();
 
 	band = lookup_band(p);
 	if (!band)
@@ -106,7 +190,7 @@ void update_band(struct task_struct *p, long old_util)
 	 * task changes abruptly.
 	 */
 	if (now - band->last_update_time >= update_interval ||
-	    (old_util >= 0 && abs(old_util - task_util(p)) > (SCHED_CAPACITY_SCALE >> 4))) {
+	    (old_util >= 0 && abs(old_util - task_util_est(p)) > (SCHED_CAPACITY_SCALE >> 4))) {
 		raw_spin_lock(&band->lock);
 		__update_band(band, now);
 		raw_spin_unlock(&band->lock);
@@ -162,7 +246,7 @@ static void join_band(struct task_struct *p)
 	band->member_count++;
 	trace_ems_manage_band(p, band->id, event);
 
-	__update_band(band, cpu_rq(0)->clock_task);
+	__update_band(band, (unsigned long)local_clock());
 	raw_spin_unlock(&band->lock);
 
 	write_unlock(&band_rwlock);
@@ -191,7 +275,7 @@ static void leave_band(struct task_struct *p)
 		cpumask_clear(&band->playable_cpus);
 	}
 
-	__update_band(band, cpu_rq(0)->clock_task);
+	__update_band(band, (unsigned long)local_clock());
 	raw_spin_unlock(&band->lock);
 
 	write_unlock(&band_rwlock);

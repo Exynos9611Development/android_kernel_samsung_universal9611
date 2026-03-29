@@ -1729,7 +1729,7 @@ void exynos_iommu_unmap_userptr(struct iommu_domain *dom,
 
 		/* ignore fault entries */
 		if (lv1ent_fault(sent)) {
-			lv2ents = min_t(unsigned int, entries, NUM_LV1ENTRIES);
+			lv2ents = min_t(unsigned int, entries, NUM_LV2ENTRIES);
 			entries -= lv2ents;
 			iova += lv2ents << SPAGE_ORDER;
 			sent++;

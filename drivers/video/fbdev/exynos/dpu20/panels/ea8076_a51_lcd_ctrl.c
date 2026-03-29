@@ -1991,14 +1991,14 @@ static int dsim_panel_probe(struct dsim_device *dsim)
 	if (IS_ERR(lcd->ld)) {
 		pr_err("%s: failed to register lcd device\n", __func__);
 		ret = PTR_ERR(lcd->ld);
-		goto exit;
+		goto exit_free;
 	}
 
 	lcd->bd = exynos_backlight_device_register("panel", dsim->dev, lcd, &panel_backlight_ops, NULL);
 	if (IS_ERR(lcd->bd)) {
 		pr_err("%s: failed to register backlight device\n", __func__);
 		ret = PTR_ERR(lcd->bd);
-		goto exit;
+		goto exit_free;
 	}
 
 	mutex_init(&lcd->lock);
@@ -2020,6 +2020,11 @@ static int dsim_panel_probe(struct dsim_device *dsim)
 	dev_info(&lcd->ld->dev, "%s: %s: done\n", kbasename(__FILE__), __func__);
 
 exit:
+	return ret;
+
+exit_free:
+	kfree(lcd);
+	dsim->priv.par = NULL;
 	return ret;
 }
 

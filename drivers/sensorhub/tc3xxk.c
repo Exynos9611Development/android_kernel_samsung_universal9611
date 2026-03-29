@@ -714,7 +714,7 @@ static int load_fw_sdcard(struct tc3xxk_data *data)
 	return ret;
 
 fail_sdcard_size:
-	kfree(&data->fw_img);
+	kfree(data->fw_img);
 fail_sdcard_kzalloc:
 	filp_close(fp, current->files);
 fail_sdcard_open:
@@ -2203,6 +2203,7 @@ err_sysfs_symlink:
 	input_dev = NULL;
 err_register_input_dev:
 err_fw_check:
+	input_free_device(input_dev);
 	data->pdata->power(data, false);
 err_pinctrl_init:
 	mutex_destroy(&data->lock_fac);

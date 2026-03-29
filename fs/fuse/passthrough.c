@@ -247,6 +247,11 @@ int fuse_passthrough_open(struct fuse_dev *fud, u32 lower_fd)
 
 	passthrough->filp = passthrough_filp;
 	passthrough->cred = prepare_creds();
+	if (!passthrough->cred) {
+		res = -ENOMEM;
+		kfree(passthrough);
+		goto err_free_file;
+	}
 
 	idr_preload(GFP_KERNEL);
 	spin_lock(&fc->passthrough_req_lock);

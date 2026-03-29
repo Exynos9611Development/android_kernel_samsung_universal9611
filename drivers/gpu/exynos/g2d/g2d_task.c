@@ -119,7 +119,7 @@ static void g2d_finish_task(struct g2d_device *g2d_dev,
 
 	g2d_secure_disable();
 
-	clk_disable(g2d_dev->clock);
+	clk_disable_unprepare(g2d_dev->clock);
 
 	pm_runtime_put(g2d_dev->dev);
 
@@ -462,7 +462,7 @@ static struct g2d_task *g2d_create_task(struct g2d_device *g2d_dev, int id)
 
 	task->source = kcalloc(g2d_dev->max_layers, sizeof(*task->source),
 			       GFP_KERNEL);
-	if (!task)
+	if (!task->source)
 		goto err_alloc;
 
 	INIT_LIST_HEAD(&task->node);

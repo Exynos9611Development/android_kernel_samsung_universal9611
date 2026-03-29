@@ -485,6 +485,8 @@ static int s2mpu09_i2c_probe(struct i2c_client *i2c,
 err_mfd:
 	mfd_remove_devices(s2mpu09->dev);
 err_irq_init:
+	i2c_unregister_device(s2mpu09->rtc);
+	i2c_unregister_device(s2mpu09->pmic);
 	i2c_unregister_device(s2mpu09->i2c);
 err_w_lock:
 	mutex_destroy(&s2mpu09->i2c_lock);

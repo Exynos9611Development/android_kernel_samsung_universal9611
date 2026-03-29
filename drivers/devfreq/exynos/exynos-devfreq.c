@@ -70,7 +70,7 @@ static int exynos_constraint_parse(struct exynos_devfreq_data *data,
 	struct device_node *np, *child;
 	u32 num_child, constraint_dm_type, constraint_type;
 	const char *devfreq_domain_name;
-	int i = 0, j, const_flag = 1;
+	int i = 0, j, const_flag = 1, ret = 0;
 	void *min_block, *dvfs_block;
 	struct ect_dvfs_domain *dvfs_domain;
 	struct ect_minlock_domain *ect_domain;
@@ -85,16 +85,22 @@ static int exynos_constraint_parse(struct exynos_devfreq_data *data,
 	data->nr_constraint = num_child;
 	data->constraint = kzalloc(sizeof(struct exynos_dm_constraint *) * num_child, GFP_KERNEL);
 #endif
-	if (of_property_read_string(data->dev->of_node, "devfreq_domain_name", &devfreq_domain_name))
-		return -ENODEV;
+	if (of_property_read_string(data->dev->of_node, "devfreq_domain_name", &devfreq_domain_name)) {
+		ret = -ENODEV;
+		goto err_free_constraint;
+	}
 
 	dvfs_block = ect_get_block(BLOCK_DVFS);
-	if (dvfs_block == NULL)
-		return -ENODEV;
+	if (dvfs_block == NULL) {
+		ret = -ENODEV;
+		goto err_free_constraint;
+	}
 
 	dvfs_domain = ect_dvfs_get_domain(dvfs_block, (char *)devfreq_domain_name);
-	if (dvfs_domain == NULL)
-		return -ENODEV;
+	if (dvfs_domain == NULL) {
+		ret = -ENODEV;
+		goto err_free_constraint;
+	}
 
 	/* Although there is not any constraint, MIF table should be sent to FVP */
 	min_block = ect_get_block(BLOCK_MINLOCK);
@@ -112,24 +118,30 @@ static int exynos_constraint_parse(struct exynos_devfreq_data *data,
 	for_each_available_child_of_node(np, child) {
 		int use_level = 0;
 
-		if (of_property_read_u32(child, "constraint_dm_type", &constraint_dm_type))
-			return -ENODEV;
-		if (of_property_read_u32(child, "constraint_type", &constraint_type))
-			return -ENODEV;
+		if (of_property_read_u32(child, "constraint_dm_type", &constraint_dm_type)) {
+			ret = -ENODEV;
+			goto err_free_constraints;
+		}
+		if (of_property_read_u32(child, "constraint_type", &constraint_type)) {
+			ret = -ENODEV;
+			goto err_free_constraints;
+		}
 #ifdef CONFIG_EXYNOS_DVFS_MANAGER
 		if (const_flag) {
 			data->constraint[i] =
 				kzalloc(sizeof(struct exynos_dm_constraint), GFP_KERNEL);
 			if (data->constraint[i] == NULL) {
 				dev_err(data->dev, "failed to allocate constraint\n");
-				return -ENOMEM;
+				ret = -ENOMEM;
+				goto err_free_constraints;
 			}
 
 			const_table = kzalloc(sizeof(struct exynos_dm_freq) * ect_domain->num_of_level, GFP_KERNEL);
 			if (const_table == NULL) {
 				dev_err(data->dev, "failed to allocate constraint\n");
 				kfree(data->constraint[i]);
-				return -ENOMEM;
+				ret = -ENOMEM;
+				goto err_free_constraints;
 			}
 
 			data->constraint[i]->guidance = true;
@@ -156,6 +168,22 @@ static int exynos_constraint_parse(struct exynos_devfreq_data *data,
 		i++;
 	}
 	return 0;
+
+err_free_constraints:
+#ifdef CONFIG_EXYNOS_DVFS_MANAGER
+	while (--i >= 0) {
+		kfree(data->constraint[i]->freq_table);
+		kfree(data->constraint[i]);
+		data->constraint[i] = NULL;
+	}
+#endif
+err_free_constraint:
+#ifdef CONFIG_EXYNOS_DVFS_MANAGER
+	kfree(data->constraint);
+	data->constraint = NULL;
+	data->nr_constraint = 0;
+#endif
+	return ret;
 }
 
 static int exynos_devfreq_update_fvp(struct exynos_devfreq_data *data, u32 min_freq, u32 max_freq)
@@ -1038,6 +1066,12 @@ static int exynos_devfreq_parse_dt(struct device_node *np, struct exynos_devfreq
 			} else {
 				data->simple_interactive_data.delay_time =
 					get_tokenized_data(buf, &ntokens);
+				if (IS_ERR(data->simple_interactive_data.delay_time)) {
+					int ret = PTR_ERR(data->simple_interactive_data.delay_time);
+
+					data->simple_interactive_data.delay_time = NULL;
+					return ret;
+				}
 				data->simple_interactive_data.ndelay_time = ntokens;
 			}
 		}
@@ -1502,10 +1536,14 @@ err_opp_noti:
 err_devfreq:
 #ifdef CONFIG_EXYNOS_DVFS_MANAGER
 	for (; nr_constraint >= 0; nr_constraint--) {
-		if (data->constraint[nr_constraint])
+		if (data->constraint[nr_constraint]) {
 			unregister_exynos_dm_constraint_table(data->dm_type,
 				data->constraint[nr_constraint]);
+			kfree(data->constraint[nr_constraint]->freq_table);
+			kfree(data->constraint[nr_constraint]);
+		}
 	}
+	kfree(data->constraint);
 err_dm_table:
 err_dm_data_init:
 #endif
@@ -1550,12 +1588,17 @@ static int exynos_devfreq_remove(struct platform_device *pdev)
 	devfreq_remove_device(data->devfreq);
 #ifdef CONFIG_EXYNOS_DVFS_MANAGER
 	for (nr_constraint = 0; nr_constraint < data->nr_constraint; nr_constraint++) {
-		if (data->constraint[nr_constraint])
+		if (data->constraint[nr_constraint]) {
 			unregister_exynos_dm_constraint_table(data->dm_type,
 				data->constraint[nr_constraint]);
+			kfree(data->constraint[nr_constraint]->freq_table);
+			kfree(data->constraint[nr_constraint]);
+		}
 	}
+	kfree(data->constraint);
 #endif
 	platform_set_drvdata(pdev, NULL);
+	kfree(data->opp_list);
 	kfree(data->devfreq_profile.freq_table);
 	mutex_destroy(&data->lock);
 	kfree(data);
@@ -1611,6 +1654,8 @@ static int exynos_devfreq_root_probe(struct platform_device *pdev)
 	num_domains = of_get_child_count(np);
 	devfreq_data = (struct exynos_devfreq_data **)kzalloc(sizeof(struct exynos_devfreq_data *)
 			* num_domains, GFP_KERNEL);
+	if (!devfreq_data)
+		return -ENOMEM;
 
 	/* probe each devfreq node */
 	of_platform_populate(np, NULL, NULL, NULL);
@@ -1625,8 +1670,17 @@ static const struct of_device_id exynos_devfreq_root_match[] = {
 	{},
 	};
 
+static int exynos_devfreq_root_remove(struct platform_device *pdev)
+{
+	kfree(devfreq_data);
+	devfreq_data = NULL;
+
+	return 0;
+}
+
 static struct platform_driver exynos_devfreq_root_driver = {
 	.probe = exynos_devfreq_root_probe,
+	.remove = exynos_devfreq_root_remove,
 	.driver = {
 		.name = "exynos-devfreq-root",
 		.owner = THIS_MODULE,

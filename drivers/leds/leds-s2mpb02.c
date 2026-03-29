@@ -395,7 +395,9 @@ static int s2mpb02_led_probe(struct platform_device *pdev)
 		camera_class = class_create(THIS_MODULE, "camera");
 		if (IS_ERR(camera_class)) {
                         pr_err("Failed to create class(camera)!\n");
-                        return PTR_ERR(camera_class);
+                        ret = PTR_ERR(camera_class);
+                        camera_class = NULL;
+                        goto err_class;
                 }
 	}
 
@@ -491,6 +493,13 @@ static int s2mpb02_led_probe(struct platform_device *pdev)
 #endif
 	pr_err("<%s> end\n", __func__);
 
+	return ret;
+
+err_class:
+	kfree(led_datas);
+#ifdef CONFIG_OF
+	kfree(pdata);
+#endif
 	return ret;
 }
 

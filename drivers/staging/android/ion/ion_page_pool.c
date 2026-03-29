@@ -20,8 +20,10 @@
 #include <linux/fs.h>
 #include <linux/list.h>
 #include <linux/init.h>
+#include <linux/mm.h>
 #include <linux/slab.h>
 #include <linux/swap.h>
+#include <linux/vmstat.h>
 
 #include <asm/cacheflush.h>
 
@@ -60,6 +62,8 @@ static int ion_page_pool_add(struct ion_page_pool *pool, struct page *page)
 		list_add_tail(&page->lru, &pool->low_items);
 		pool->low_count++;
 	}
+	mod_node_page_state(page_pgdat(page), NR_SLAB_RECLAIMABLE,
+			    1 << pool->order);
 	mutex_unlock(&pool->mutex);
 	return 0;
 }
@@ -79,6 +83,8 @@ static struct page *ion_page_pool_remove(struct ion_page_pool *pool, bool high)
 	}
 
 	list_del(&page->lru);
+	mod_node_page_state(page_pgdat(page), NR_SLAB_RECLAIMABLE,
+			    -(1 << pool->order));
 	return page;
 }
 
@@ -182,6 +188,16 @@ struct ion_page_pool *ion_page_pool_create(gfp_t gfp_mask, unsigned int order,
 
 void ion_page_pool_destroy(struct ion_page_pool *pool)
 {
+	struct page *page;
+
+	while (pool->high_count) {
+		page = ion_page_pool_remove(pool, true);
+		ion_page_pool_free_pages(pool, page);
+	}
+	while (pool->low_count) {
+		page = ion_page_pool_remove(pool, false);
+		ion_page_pool_free_pages(pool, page);
+	}
 	kfree(pool);
 }
 

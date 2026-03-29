@@ -1019,6 +1019,7 @@ static int exynos_usbdrd_get_sub_phyinfo(struct exynos_usbdrd_phy *phy_drd)
 	tune_node = of_parse_phandle(dev->of_node, "ss_tune_param", 0);
 	if (tune_node != NULL) {
 		ret = exynos_usbdrd_fill_sstune_param(phy_drd, tune_node);
+		of_node_put(tune_node);
 		if (ret < 0) {
 			dev_err(dev, "can't fill super speed tuning param\n");
 			return -EINVAL;
@@ -1086,10 +1087,13 @@ static int exynos_usbdrd_get_phyinfo(struct exynos_usbdrd_phy *phy_drd)
 
 	if (of_device_is_available(tune_node)) {
 		ret = exynos_usbdrd_fill_sstune(phy_drd, tune_node);
+		of_node_put(tune_node);
 		if (ret < 0) {
 			dev_err(dev, "can't fill super speed tuning info\n");
 			return -EINVAL;
 		}
+	} else {
+		of_node_put(tune_node);
 	}
 
 	/*
@@ -1101,10 +1105,13 @@ static int exynos_usbdrd_get_phyinfo(struct exynos_usbdrd_phy *phy_drd)
 
 	if (of_device_is_available(tune_node)) {
 		ret = exynos_usbdrd_fill_hstune(phy_drd, tune_node);
+		of_node_put(tune_node);
 		if (ret < 0) {
 			dev_err(dev, "can't fill high speed tuning info\n");
 			return -EINVAL;
 		}
+	} else {
+		of_node_put(tune_node);
 	}
 #endif
 
@@ -1114,6 +1121,7 @@ static int exynos_usbdrd_get_phyinfo(struct exynos_usbdrd_phy *phy_drd)
 	tune_node = of_parse_phandle(dev->of_node, "ss_tune_param", 0);
 	if (tune_node != NULL) {
 		ret = exynos_usbdrd_fill_sstune_param(phy_drd, tune_node);
+		of_node_put(tune_node);
 		if (ret < 0) {
 			dev_err(dev, "can't fill super speed tuning param\n");
 			return -EINVAL;
@@ -1128,6 +1136,7 @@ static int exynos_usbdrd_get_phyinfo(struct exynos_usbdrd_phy *phy_drd)
 	tune_node = of_parse_phandle(dev->of_node, "hs_tune_param", 0);
 	if (tune_node != NULL) {
 		ret = exynos_usbdrd_fill_hstune_param(phy_drd, tune_node);
+		of_node_put(tune_node);
 		if (ret < 0) {
 			dev_err(dev, "can't fill high speed tuning param\n");
 			return -EINVAL;

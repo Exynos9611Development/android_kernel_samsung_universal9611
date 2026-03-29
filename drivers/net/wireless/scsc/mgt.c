@@ -842,6 +842,13 @@ int slsi_start(struct slsi_dev *sdev, struct net_device *dev)
 
 		for (i = 0; i < SLSI_WLAN_MAX_MIB_FILE; i++)
 			slsi_mib_close_file(sdev, fw[i]);
+#if IS_ENABLED(CONFIG_SCSC_LOG_COLLECTION)
+		for (i = 0; i < SLSI_WLAN_MAX_MIB_FILE; i++) {
+			kfree(sdev->collect_mib.file[i].data);
+			sdev->collect_mib.file[i].data = NULL;
+		}
+		sdev->collect_mib.num_files = 0;
+#endif
 		if (err != -EILSEQ)
 			slsi_sm_wlan_service_close(sdev);
 		goto err_done;
@@ -1081,8 +1088,11 @@ void slsi_stop_chip(struct slsi_dev *sdev)
 #if IS_ENABLED(CONFIG_SCSC_LOG_COLLECTION)
 	sdev->collect_mib.enabled = false;
 	scsc_log_collector_unregister_client(&slsi_hcf_client);
-	for (i = 0; i < index; i++)
+	for (i = 0; i < index; i++) {
 		kfree(sdev->collect_mib.file[i].data);
+		sdev->collect_mib.file[i].data = NULL;
+	}
+	sdev->collect_mib.num_files = 0;
 #endif
 
 	sdev->device_state = SLSI_DEVICE_STATE_STOPPING;
@@ -1656,6 +1666,15 @@ cont:
 	} else {
 		/* Bad header */
 		SLSI_ERR(sdev, "configuration file '%s' has bad header\n", mib_info->mib_file_name);
+#if IS_ENABLED(CONFIG_SCSC_LOG_COLLECTION)
+		spin_lock(&sdev->collect_mib.in_collection);
+		if (sdev->collect_mib.file[index].data) {
+			kfree(sdev->collect_mib.file[index].data);
+			sdev->collect_mib.file[index].data = NULL;
+			sdev->collect_mib.num_files -= 1;
+		}
+		spin_unlock(&sdev->collect_mib.in_collection);
+#endif
 		mx140_file_release_conf(sdev->maxwell_core, e);
 		return -EINVAL;
 	}

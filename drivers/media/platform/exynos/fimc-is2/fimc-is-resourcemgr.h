@@ -134,6 +134,9 @@ struct fimc_is_resourcemgr {
 #ifndef ENABLE_IS_CORE
 	unsigned long				binary_state;
 #endif
+	/* ION priv_buf backing the DDK/RTA heap VM areas */
+	struct fimc_is_priv_buf			*pb_heap;
+	struct fimc_is_priv_buf			*pb_heap_rta;
 
 #ifdef ENABLE_SHARED_METADATA
 	/* shared meta data */

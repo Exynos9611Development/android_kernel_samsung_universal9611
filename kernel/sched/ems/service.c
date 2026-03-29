@@ -105,8 +105,10 @@ select_prefer_cpu(struct task_struct *p, int coregroup_count, struct cpumask *pr
 {
 	struct cpumask mask;
 	int coregroup, cpu;
+	unsigned long task_util_val = task_util_est(p);
 	unsigned long max_spare_cap = 0;
 	int best_perf_cstate = INT_MAX;
+	unsigned long best_perf_idle_util = ULONG_MAX;
 	int best_perf_cpu = -1;
 	int backup_cpu = -1;
 
@@ -118,24 +120,44 @@ select_prefer_cpu(struct task_struct *p, int coregroup_count, struct cpumask *pr
 			continue;
 
 		for_each_cpu_and(cpu, &p->cpus_allowed, &mask) {
-			unsigned long capacity_orig;
-			unsigned long wake_util;
+			unsigned long capacity_orig = capacity_orig_of(cpu);
+			unsigned long wake_util = cpu_util_wake(cpu, p);
+			unsigned long new_util;
+
+			new_util = wake_util + task_util_val;
+			new_util = max(new_util, boosted_task_util(p));
+
+			/* Skip over-capacity CPUs for both idle and active paths */
+			if (new_util > capacity_orig)
+				continue;
 
 			if (idle_cpu(cpu)) {
 				int idle_idx = idle_get_state_idx(cpu_rq(cpu));
 
-				/* find shallowest idle state cpu */
-				if (idle_idx >= best_perf_cstate)
+				/*
+				 * Prefer shallowest idle state for fastest wake-up.
+				 * Among equal idle depths prefer the less loaded CPU
+				 * (same fix as pcf.c::select_perf_cpu).
+				 */
+				if (idle_idx > best_perf_cstate)
+					continue;
+
+				if (idle_idx == best_perf_cstate &&
+				    wake_util >= best_perf_idle_util)
 					continue;
 
 				/* Keep track of best idle CPU */
 				best_perf_cstate = idle_idx;
+				best_perf_idle_util = wake_util;
 				best_perf_cpu = cpu;
 				continue;
 			}
 
-			capacity_orig = capacity_orig_of(cpu);
-			wake_util = cpu_util_wake(cpu, p);
+			/*
+			 * For active CPUs use spare capacity as the metric but
+			 * with the capacity check already applied above so we
+			 * never pick a CPU that would overflow after placement.
+			 */
 			if ((capacity_orig - wake_util) < max_spare_cap)
 				continue;
 
@@ -176,16 +198,16 @@ int select_service_cpu(struct task_struct *p)
 	util = task_util_est(p);
 	if (util <= pp->threshold) {
 		service_cpu = select_prefer_cpu(p, 1, pp->prefer_cpus);
-		strcpy(state, "light task");
+		strlcpy(state, "light task", sizeof(state));
 		goto out;
 	}
 
 	if (p->prio <= 110) {
 		service_cpu = select_prefer_cpu(p, 1, pp->prefer_cpus);
-		strcpy(state, "high-prio task");
+		strlcpy(state, "high-prio task", sizeof(state));
 	} else {
 		service_cpu = select_prefer_cpu(p, pp->coregroup_count, pp->prefer_cpus);
-		strcpy(state, "heavy task");
+		strlcpy(state, "heavy task", sizeof(state));
 	}
 
 out:
@@ -212,24 +234,39 @@ __ATTR(kernel_prefer_perf, 0444, show_kpp, NULL);
 
 static void __init build_prefer_cpus(void)
 {
-	struct device_node *dn, *child;
+	struct device_node *ems_dn, *dn, *child;
 	int index = 0;
 
-	dn = of_find_node_by_name(NULL, "ems");
-	dn = of_find_node_by_name(dn, "prefer-perf-service");
+	ems_dn = of_find_node_by_name(NULL, "ems");
+	if (!ems_dn)
+		return;
+
+	dn = of_get_child_by_name(ems_dn, "prefer-perf-service");
+	of_node_put(ems_dn);
+	if (!dn)
+		return;
+
 	prefer_perf_service_count = of_get_child_count(dn);
+	if (!prefer_perf_service_count) {
+		of_node_put(dn);
+		return;
+	}
 
 	prefer_perf_services = kcalloc(prefer_perf_service_count,
 				sizeof(struct prefer_perf), GFP_KERNEL);
-	if (!prefer_perf_services)
+	if (!prefer_perf_services) {
+		of_node_put(dn);
 		return;
+	}
 
 	for_each_child_of_node(dn, child) {
 		const char *mask[NR_CPUS];
 		int i, proplen;
 
-		if (index >= prefer_perf_service_count)
-			return;
+		if (index >= prefer_perf_service_count) {
+			of_node_put(child);
+			break;
+		}
 
 		of_property_read_u32(child, "boost",
 					&prefer_perf_services[index].boost);
@@ -246,6 +283,8 @@ static void __init build_prefer_cpus(void)
 		of_property_read_string_array(child, "prefer-cpus", mask, proplen);
 		prefer_perf_services[index].prefer_cpus = kcalloc(proplen,
 						sizeof(struct cpumask), GFP_KERNEL);
+		if (!prefer_perf_services[index].prefer_cpus)
+			goto next;
 
 		for (i = 0; i < proplen; i++)
 			cpulist_parse(mask[i], &prefer_perf_services[index].prefer_cpus[i]);
@@ -253,6 +292,8 @@ static void __init build_prefer_cpus(void)
 next:
 		index++;
 	}
+
+	of_node_put(dn);
 }
 
 static int __init init_service(void)
@@ -265,7 +306,7 @@ static int __init init_service(void)
 
 	ret = sysfs_create_file(ems_kobj, &kpp_attr.attr);
 	if (ret)
-		pr_err("%s: faile to create sysfs file\n", __func__);
+		pr_err("%s: failed to create sysfs file\n", __func__);
 
 	return 0;
 }

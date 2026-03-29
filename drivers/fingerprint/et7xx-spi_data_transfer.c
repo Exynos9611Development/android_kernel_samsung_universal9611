@@ -1150,6 +1150,7 @@ int et7xx_eeprom_sector_erase(struct et7xx_data *etspi, struct egis_ioc_transfer
 	if (ioc->len > MICROCHIP_SST_PAGE_PROGRAM_LIMITATION) {
 		pr_err("len EINVAL\n");
 		retval = -EINVAL;
+		goto end;
 	}
 
 	buf = kzalloc(ioc->len + 1, GFP_KERNEL);
@@ -1205,6 +1206,7 @@ int et7xx_eeprom_block_erase(struct et7xx_data *etspi, struct egis_ioc_transfer 
 	if (ioc->len > MICROCHIP_SST_PAGE_PROGRAM_LIMITATION) {
 		pr_err("len EINVAL\n");
 		retval = -EINVAL;
+		goto end;
 	}
 
 	buf = kzalloc(ioc->len + 1, GFP_KERNEL);
@@ -1426,6 +1428,7 @@ int et7xx_eeprom_write(struct et7xx_data *etspi, struct egis_ioc_transfer *ioc)
 	if (ioc->len > MICROCHIP_SST_PAGE_PROGRAM_LIMITATION) {
 		pr_err("len EINVAL\n");
 		retval = -EINVAL;
+		goto end;
 	}
 
 	buf = kzalloc(ioc->len + 1, GFP_KERNEL);

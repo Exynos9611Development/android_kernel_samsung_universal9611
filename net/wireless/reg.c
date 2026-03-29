@@ -2375,7 +2375,7 @@ static void queue_regulatory_request(struct regulatory_request *request)
 {
 #ifdef CONFIG_CFG80211_REG_NOT_UPDATED
 	printk(KERN_INFO "regulatory is not updated via %s.\n", __func__);
-	if (!request)
+	if (request)
 		kfree(request);
 	return;
 #endif

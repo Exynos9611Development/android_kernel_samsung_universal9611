@@ -680,13 +680,15 @@ static int exynos_ocp_probe(struct platform_device *pdev)
 	ret = ocp_dt_parsing(dn);
 	if (ret) {
 		dev_err(&pdev->dev, "Failed to parse OCP data\n");
-		return -ENODEV;
+		ret = -ENODEV;
+		goto free_data;
 	}
 
 	policy = cpufreq_cpu_get(data->cpu);
 	if (!policy) {
 		dev_err(&pdev->dev, "Failed to get CPUFreq policy\n");
-		return -ENODEV;
+		ret = -ENODEV;
+		goto free_data;
 	}
 
 	data->enabled = true;
@@ -704,14 +706,16 @@ static int exynos_ocp_probe(struct platform_device *pdev)
 	data->irq = irq_of_parse_and_map(dn, 0);
 	if (data->irq <= 0) {
 		dev_err(&pdev->dev, "Failed to get IRQ\n");
-		return -ENODEV;
+		ret = -ENODEV;
+		goto free_data;
 	}
 
 	ret = devm_request_irq(&pdev->dev, data->irq, exynos_ocp_irq_handler,
 			IRQF_TRIGGER_RISING, dev_name(&pdev->dev), data);
 	if (ret) {
 		dev_err(&pdev->dev, "Failed to request IRQ handler: %d\n", data->irq);
-		return -ENODEV;
+		ret = -ENODEV;
+		goto free_data;
 	}
 
 	INIT_WORK(&data->work, exynos_ocp_work);
@@ -721,7 +725,8 @@ static int exynos_ocp_probe(struct platform_device *pdev)
 	get_s2mps19_i2c(&data->i2c);
 	if (data->i2c == NULL) {
 		dev_err(&pdev->dev, "Failed to get s2mps19 i2c_client\n");
-		return -ENODEV;
+		ret = -ENODEV;
+		goto free_data;
 	}
 
 	ret = sysfs_create_group(&pdev->dev.kobj, &exynos_ocp_attr_group);
@@ -730,6 +735,11 @@ static int exynos_ocp_probe(struct platform_device *pdev)
 
 	dev_info(&pdev->dev, "Complete OCP Handler initialization\n");
 	return 0;
+
+free_data:
+	kfree(data);
+	data = NULL;
+	return ret;
 }
 
 static const struct of_device_id of_exynos_ocp_match[] = {

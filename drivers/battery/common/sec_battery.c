@@ -7126,7 +7126,6 @@ err_irq:
 	mutex_destroy(&battery->typec_notylock);
 	mutex_destroy(&battery->wclock);
 	mutex_destroy(&battery->voutlock);
-	kfree(pdata);
 err_bat_free:
 	kfree(battery);
 

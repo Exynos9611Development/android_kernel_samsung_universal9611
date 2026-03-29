@@ -547,7 +547,7 @@ static void _decon_abd_pin_enable(struct abd_protect *abd, struct abd_pin_info *
 		decon_abd_save_pin(abd, pin, trace, on);
 
 	dbg_info("%s: on: %d, %s(%3d,%d) level: %d, count: %d(event: %d), state: %d, %s\n", __func__,
-		on, pin->name, pin->irq, pin->desc->depth, pin->level, trace->count, event->count, state,
+		on, pin->name, pin->irq, pin->desc ? pin->desc->depth : 0, pin->level, trace->count, event->count, state,
 		(pin->level == pin->active_level) ? "abnormal" : "normal");
 
 	if (pin->name && !strcmp(pin->name, "pcd"))
@@ -715,9 +715,10 @@ int decon_abd_pin_unregister_handler(struct abd_protect *abd, int irq, irq_handl
 			dbg_info("%s: find irq(%d) for %s pin\n", __func__, irq, pin->name);
 
 			list_for_each_entry_safe(pin_handler, tmp, &pin->handler_list, node) {
-				if (pin_handler->handler == handler && pin_handler->dev_id == dev_id)
-					list_del(&pin->handler_list);
-				kfree(pin_handler);
+				if (pin_handler->handler == handler && pin_handler->dev_id == dev_id) {
+					list_del(&pin_handler->node);
+					kfree(pin_handler);
+				}
 			}
 
 			dbg_info("%s: handler is unregistered\n", __func__);
@@ -1134,7 +1135,7 @@ static int decon_abd_pin_register_function(struct abd_protect *abd, struct abd_p
 		dbg_info("%s: gpio_to_irq fail, gpio: %d, irq: %d\n", __func__, gpio, gpio_to_irq(gpio));
 		pin->gpio = gpio;
 		pin->irq = 0;
-		pin->desc = kzalloc(sizeof(struct irq_desc), GFP_KERNEL);
+		pin->desc = NULL;
 	}
 
 	pin->active_level = !(flags & OF_GPIO_ACTIVE_LOW);
@@ -1526,6 +1527,22 @@ static void decon_abd_register(struct abd_protect *abd)
 	decon_abd_register_fops(abd);
 
 	dbg_info("%s: -- entity was registered\n", __func__);
+}
+
+void decon_abd_unregister(struct abd_protect *abd)
+{
+	unsigned int i = 0;
+
+	unregister_reboot_notifier(&abd->reboot_notifier);
+
+	for (i = 0; i < ABD_LOG_MAX; i++) {
+		kfree(abd->u_first.log[i].bts);
+		abd->u_first.log[i].bts = NULL;
+		kfree(abd->u_lcdon.log[i].bts);
+		abd->u_lcdon.log[i].bts = NULL;
+		kfree(abd->u_event.log[i].bts);
+		abd->u_event.log[i].bts = NULL;
+	}
 }
 
 static int match_dev_name(struct device *dev, const void *data)
