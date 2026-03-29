@@ -173,7 +173,7 @@ static void __update_band(struct task_band *band, unsigned long now)
 		*(unsigned int *)cpumask_bits(&band->playable_cpus));
 }
 
-static int update_interval = 20000000;	/* 20ms */
+static int update_interval = 40000000;	/* 40ms */
 
 void update_band(struct task_struct *p, long old_util)
 {
