@@ -193,7 +193,9 @@ static int alloc_lbt_sysfs(int size)
 
 fail_alloc:
 	kfree(lbt_attrs);
+	lbt_attrs = NULL;
 	kfree(lbt_kattrs);
+	lbt_kattrs = NULL;
 
 	pr_err("LBT(%s): failed to alloc sysfs attrs\n", __func__);
 	return -ENOMEM;
