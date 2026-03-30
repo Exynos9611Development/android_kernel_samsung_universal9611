@@ -235,8 +235,20 @@ static void join_band(struct task_struct *p)
 	}
 
 	/* failed to find band, organize the new band */
-	if (pos == MAX_NUM_BAND_ID)
+	if (pos == MAX_NUM_BAND_ID) {
+		if (unlikely(empty < 0)) {
+			/* All band slots occupied; drop silently */
+			write_unlock(&band_rwlock);
+			return;
+		}
 		band = bands[empty];
+	}
+
+	/* Re-check p->band under the write lock to close the TOCTOU window */
+	if (p->band) {
+		write_unlock(&band_rwlock);
+		return;
+	}
 
 	raw_spin_lock(&band->lock);
 	if (!band_playing(band))
@@ -262,6 +274,10 @@ static void leave_band(struct task_struct *p)
 
 	write_lock(&band_rwlock);
 	band = p->band;
+	if (!band) {
+		write_unlock(&band_rwlock);
+		return;
+	}
 
 	raw_spin_lock(&band->lock);
 	list_del_init(&p->band_members);
