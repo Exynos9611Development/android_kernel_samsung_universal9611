@@ -549,26 +549,38 @@ static void update_min_vruntime(struct cfs_rq *cfs_rq)
 	struct rb_node *leftmost = rb_first_cached(&cfs_rq->tasks_timeline);
 
 	u64 vruntime = cfs_rq->min_vruntime;
-#ifdef CONFIG_FAST_TRACK
-	if (cfs_rq->ftt_rqcnt) {
-		return;
-	}
-#endif
+
 	if (curr) {
-		if (curr->on_rq)
-			vruntime = curr->vruntime;
-		else
+		if (curr->on_rq) {
+#ifdef CONFIG_FAST_TRACK
+			/*
+			 * FTT tasks hold an artificially lowered vruntime.
+			 * Treat them as absent so they never stall min_vruntime.
+			 */
+			if (is_ftt(curr))
+				curr = NULL;
+			else
+#endif
+				vruntime = curr->vruntime;
+		} else {
 			curr = NULL;
+		}
 	}
 
 	if (leftmost) { /* non-empty tree */
 		struct sched_entity *se;
 		se = rb_entry(leftmost, struct sched_entity, run_node);
 
-		if (!curr)
-			vruntime = se->vruntime;
-		else
-			vruntime = min_vruntime(vruntime, se->vruntime);
+#ifdef CONFIG_FAST_TRACK
+		if (!is_ftt(se)) {
+#endif
+			if (!curr)
+				vruntime = se->vruntime;
+			else
+				vruntime = min_vruntime(vruntime, se->vruntime);
+#ifdef CONFIG_FAST_TRACK
+		}
+#endif
 	}
 
 	/* ensure we never gain time by being placed backwards. */
@@ -944,6 +956,7 @@ static void update_curr(struct cfs_rq *cfs_rq)
 
 		if (is_ftt(curr)) {
 			curr->ftt_vrt_delta += calc_delta_fair(delta_exec, curr);
+			update_min_vruntime(cfs_rq);
 		} else {
 			curr->vruntime += calc_delta_fair(delta_exec, curr);
 			update_min_vruntime(cfs_rq);
