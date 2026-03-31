@@ -33,7 +33,8 @@ inline void __ftt_init_vruntime(struct cfs_rq *cfs_rq, struct sched_entity *se)
 {
 	u64 vruntime = cfs_rq->min_vruntime - FTT_VRUNTIME_SPAN;
 
-	se->ftt_vrt_delta += se->vruntime - vruntime;
+	if (se->vruntime >= vruntime)
+		se->ftt_vrt_delta += se->vruntime - vruntime;
 	se->vruntime = vruntime;
 }
 
