@@ -452,13 +452,13 @@ static int ontime_migration_cpu_stop(void *data)
 		trace_ems_ontime_migration(p, ontime_of(p)->avg.load_avg,
 				src_cpu, dst_cpu, boost_migration);
 	}
+	dst_rq->ontime_migrating = 0;
 	double_unlock_balance(src_rq, dst_rq);
 
 out_unlock:
 	ontime_of(p)->migrating = 0;
 
 	src_rq->active_balance = 0;
-	dst_rq->ontime_migrating = 0;
 
 	raw_spin_unlock_irq(&src_rq->lock);
 	put_task_struct(p);
