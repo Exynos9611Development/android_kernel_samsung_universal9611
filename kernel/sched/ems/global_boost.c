@@ -71,10 +71,12 @@ static ssize_t show_global_boost(struct kobject *kobj,
 	int ret = 0;
 
 	/* show all requests as well as user level */
-	plist_for_each_entry(req, &gb_list, node)
-		ret += snprintf(buf + ret, 30, "%s : %d\n",
+	plist_for_each_entry(req, &gb_list, node) {
+		if (ret >= PAGE_SIZE)
+			break;
+		ret += snprintf(buf + ret, PAGE_SIZE - ret, "%s : %d\n",
 				req->name, req->node.prio);
-
+	}
 	return ret;
 }
 
