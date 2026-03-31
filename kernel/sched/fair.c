@@ -8506,7 +8506,7 @@ again:
 		if (cfs_rq->ftt_sched_count >= FTT_MAX_SCHED)
 			cfs_rq->ftt_sched_count--;
 		else
-			cfs_rq->ftt_sched_count = cfs_rq->ftt_sched_count - 2 > 0 ?
+			cfs_rq->ftt_sched_count = cfs_rq->ftt_sched_count > 2 ?
 				cfs_rq->ftt_sched_count - 2 : 0;
 	}
 #endif
