@@ -478,8 +478,8 @@ struct cfs_rq {
 	u64 min_vruntime_copy;
 #endif
 #ifdef CONFIG_FAST_TRACK
-	int 			ftt_rqcnt;
-	int			ftt_sched_count;
+	unsigned int		ftt_rqcnt;
+	unsigned int		ftt_sched_count;
 #endif
 
 	struct rb_root_cached tasks_timeline;
