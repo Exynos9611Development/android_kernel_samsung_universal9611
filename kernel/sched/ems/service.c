@@ -48,7 +48,7 @@ void kpp_request(int grp_idx, struct kpp *req, int value)
 	if (grp_idx >= STUNE_GROUP_COUNT)
 		return;
 
-	if (req->node.prio == value)
+	if (req->active && req->node.prio == value && req->grp_idx == grp_idx)
 		return;
 
 	spin_lock_irqsave(&kpp_lock, flags);
