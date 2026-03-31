@@ -16,10 +16,10 @@ struct sched_entity;
 struct task_struct;
 
 struct ftt_stat {
-	int ftt_cnt;
-	int pick_ftt;
-	int wrong;
-	int dyn_cnt;
+	u64 ftt_cnt;
+	u64 pick_ftt;
+	u64 wrong;
+	u64 dyn_cnt;
 };
 extern struct ftt_stat fttstat;
 extern int is_ftt(struct sched_entity *se);
