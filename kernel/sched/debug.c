@@ -942,6 +942,8 @@ __initcall(init_sched_debug_procfs);
 
 #define __P(F) \
 	SEQ_printf(m, "%-45s:%21Ld\n", #F, (long long)F)
+#define __PS(F, S) \
+        SEQ_printf(m, "%-45s:%21Ld\n", F, (long long)S)
 #define P(F) \
 	SEQ_printf(m, "%-45s:%21Ld\n", #F, (long long)p->F)
 #define __PN(F) \
@@ -1089,6 +1091,7 @@ void proc_sched_show_task(struct task_struct *p, struct pid_namespace *ns,
 #undef __PN
 #undef P_SCHEDSTAT
 #undef P
+#undef __PS
 #undef __P
 
 	{
