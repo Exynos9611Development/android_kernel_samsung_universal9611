@@ -3919,9 +3919,20 @@ static inline int util_fits_cpu(unsigned long util,
 
 static inline int task_fits_cpu(struct task_struct *p, int cpu)
 {
-        unsigned long uclamp_min = uclamp_eff_value(p, UCLAMP_MIN);
-        unsigned long uclamp_max = uclamp_eff_value(p, UCLAMP_MAX);
+	unsigned long p_util_min = uclamp_eff_value(p, UCLAMP_MIN);
+	unsigned long p_util_max = uclamp_eff_value(p, UCLAMP_MAX);
+	unsigned long uclamp_min = p_util_min;
+	unsigned long uclamp_max = p_util_max;
         unsigned long util = task_util_est(p);
+
+	if (uclamp_is_used() && !uclamp_rq_is_idle(cpu_rq(cpu))) {
+		unsigned long rq_util_min = uclamp_rq_get(cpu_rq(cpu), UCLAMP_MIN);
+		unsigned long rq_util_max = uclamp_rq_get(cpu_rq(cpu), UCLAMP_MAX);
+
+		uclamp_min = max(rq_util_min, p_util_min);
+		uclamp_max = max(rq_util_max, p_util_max);
+	}
+
         return util_fits_cpu(util, uclamp_min, uclamp_max, cpu);
 }
 
