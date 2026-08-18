@@ -27,14 +27,9 @@ extern unsigned int calculate_energy(struct task_struct *p, int target_cpu);
 extern int band_play_cpu(struct task_struct *p);
 extern int ontime_can_migration(struct task_struct *p, int dst_cpu);
 
-#ifdef CONFIG_SCHED_TUNE
 extern int prefer_perf_cpu(struct task_struct *p);
 extern int prefer_idle_cpu(struct task_struct *p);
 extern int group_balancing(struct task_struct *p);
-#else
-static inline int prefer_perf_cpu(struct task_struct *p) { return -1; }
-static inline int prefer_idle_cpu(struct task_struct *p) { return -1; }
-#endif
 
 extern unsigned long cpu_util(int cpu);
 extern unsigned long task_util(struct task_struct *p);

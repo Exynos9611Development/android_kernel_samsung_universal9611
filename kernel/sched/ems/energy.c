@@ -79,7 +79,7 @@ unsigned int calculate_energy(struct task_struct *p, int target_cpu)
 			/*
 			 * Use max(task_util_est, boosted_task_util) so that
 			 * the energy cost reflects the capacity the task will
-			 * actually consume at runtime.  A schedtune-boosted
+			 * actually consume at runtime.  A uclamp-boosted
 			 * task needs boosted_task_util() capacity; ignoring
 			 * the boost underestimates the frequency needed on
 			 * the target CPU and biases the energy comparison
@@ -194,7 +194,7 @@ static int find_min_util_cpu(struct cpumask *mask, struct task_struct *p,
 		unsigned long new_util = util + task_util_val;
 
 		/*
-		 * Account for schedtune boost: a boosted task needs at least
+		 * Account for uclamp boost: a boosted task needs at least
 		 * boosted_task_util() capacity, regardless of the raw PELT
 		 * estimate.  This matches the capacity check used in every
 		 * other EMS CPU selector (band.c, pcf.c, service.c, etc.).

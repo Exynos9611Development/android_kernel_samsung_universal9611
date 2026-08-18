@@ -8,7 +8,6 @@
 #include <linux/ems.h>
 
 #include "../sched.h"
-#include "../tune.h"
 #include "ems.h"
 
 #define CREATE_TRACE_POINTS
@@ -172,6 +171,14 @@ bool lb_group_is_busy(struct cpumask *cpus,
 		return false;
 
 	return true;
+}
+
+unsigned long boosted_task_util(struct task_struct *p)
+{
+	unsigned long util = task_util_est(p);
+	unsigned long margin = uclamp_eff_value(p, UCLAMP_MIN);
+
+	return util + margin;
 }
 
 static void lb_find_busiest_faster_queue(int dst_cpu,
@@ -396,7 +403,7 @@ static int lb_idle_pull_tasks(int dst_cpu, int src_cpu, int type)
 		 * max of util_avg and the EWMA history, giving a stable estimate
 		 * of the task's true load from the moment it woke up.
 		 *
-		 * Also account for schedtune boost: a boosted task's effective
+		 * Also account for uclamp boost: a boosted task's effective
 		 * utilisation is max(task_util_est, boosted_task_util), which
 		 * can significantly exceed the raw PELT estimate.  Without this
 		 * a highly-boosted task with a modest task_util_est would look
@@ -854,7 +861,7 @@ int exynos_wakeup_balance(struct task_struct *p, int prev_cpu, int sd_flag, int 
 	 * Priority 2 : prefer-perf
 	 *
 	 * Prefer-perf is a function that operates on cgroup basis managed by
-	 * schedtune. When prefer-perf is set to 1, the tasks in the group are
+	 * uclamp. When prefer-perf is set to 1, the tasks in the group are
 	 * preferentially assigned to the performance cpu.
 	 *
 	 * It has a high priority because it is a function that is turned on
@@ -877,7 +884,7 @@ int exynos_wakeup_balance(struct task_struct *p, int prev_cpu, int sd_flag, int 
 	 *
 	 * The "task band" is a function that groups tasks on a per-process basis
 	 * and assigns them to a specific cpu or cluster. If the attribute "band"
-	 * of schedtune.cgroup is set to '1', task band operate on this cgroup.
+	 * of uclamp.cgroup is set to '1', task band operate on this cgroup.
 	 */
 	target_cpu = band_play_cpu(p);
 	if (cpu_selected(target_cpu)) {
@@ -909,7 +916,7 @@ int exynos_wakeup_balance(struct task_struct *p, int prev_cpu, int sd_flag, int 
 	 * Priority 5 : prefer-idle
 	 *
 	 * Prefer-idle is a function that operates on cgroup basis managed by
-	 * schedtune. When prefer-idle is set to 1, the tasks in the group are
+	 * uclamp. When prefer-idle is set to 1, the tasks in the group are
 	 * preferentially assigned to the idle cpu.
 	 *
 	 * Prefer-idle has a smaller performance impact than the above. Therefore

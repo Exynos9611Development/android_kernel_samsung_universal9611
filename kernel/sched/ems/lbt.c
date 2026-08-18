@@ -14,7 +14,6 @@
 #include <trace/events/ems.h>
 
 #include "../sched.h"
-#include "../tune.h"
 #include "./ems.h"
 
 /****************************************************************/

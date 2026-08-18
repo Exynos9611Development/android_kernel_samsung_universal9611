@@ -96,7 +96,7 @@ int select_perf_cpu(struct task_struct *p)
 		 * Use task_util_est() rather than a raw util delta so that tasks
 		 * with UTIL_EST history (e.g. camera threads being rescheduled)
 		 * are accounted for correctly.  Also honour boosted_task_util()
-		 * so that a schedtune-boosted task is not placed on a CPU whose
+		 * so that a uclamp-boosted task is not placed on a CPU whose
 		 * effective capacity would be exceeded after the boost is applied.
 		 */
 		wake_util = cpu_util_wake(cpu, p);

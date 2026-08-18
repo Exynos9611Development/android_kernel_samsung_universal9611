@@ -10,10 +10,24 @@
 #include <linux/slab.h>
 #include <linux/ems_service.h>
 #include <trace/events/ems.h>
+#include <linux/cpumask.h>
+#include <linux/sched/topology.h>
+#include <linux/sched/sysctl.h>
 
 #include "../sched.h"
-#include "../tune.h"
 #include "ems.h"
+
+static inline int get_uclamp_boost_level(struct task_struct *p)
+{
+	unsigned long uclamp_min = uclamp_eff_value(p, UCLAMP_MIN);
+	if (uclamp_min > 600)
+		return 3;
+	else if (uclamp_min > 200)
+		return 2;
+	else if (uclamp_min > 0)
+		return 1;
+	return 0;
+}
 
 /**********************************************************************
  *                        Kernel Prefer Perf                          *
@@ -187,7 +201,8 @@ int select_service_cpu(struct task_struct *p)
 	if (!prefer_perf_services)
 		return -1;
 
-	boost = schedtune_prefer_perf(p);
+	boost = get_uclamp_boost_level(p);
+
 	if (boost <= 0)
 		return -1;
 
@@ -220,7 +235,7 @@ static ssize_t show_kpp(struct kobject *kobj,
 {
 	int i, ret = 0;
 
-	/* shows the prefer_perf value of all schedtune groups */
+	/* shows the prefer_perf value of all uclamp groups */
 	for (i = 0; i < STUNE_GROUP_COUNT; i++)
 		ret += snprintf(buf + ret, 10, "%d ", kpp_status(i));
 

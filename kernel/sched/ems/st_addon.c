@@ -11,7 +11,6 @@
 #include <trace/events/ems.h>
 
 #include "../sched.h"
-#include "../tune.h"
 #include "ems.h"
 
 /**********************************************************************
@@ -23,7 +22,7 @@
  */
 int prefer_perf_cpu(struct task_struct *p)
 {
-	if (schedtune_prefer_perf(p) <= 0)
+	if (uclamp_eff_value(p, UCLAMP_MIN) == 0)
 		return -1;
 
 	return select_perf_cpu(p);
@@ -136,7 +135,7 @@ static int select_idle_cpu(struct task_struct *p)
 
 int prefer_idle_cpu(struct task_struct *p)
 {
-	if (schedtune_prefer_idle(p) <= 0)
+	if (!uclamp_latency_sensitive(p))
 		return -1;
 
 	return select_idle_cpu(p);
