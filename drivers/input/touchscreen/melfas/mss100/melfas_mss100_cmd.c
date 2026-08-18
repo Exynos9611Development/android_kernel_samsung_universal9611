@@ -1447,7 +1447,7 @@ static void run_trx_short_test(void *device_data)
 		input_err(true, &info->client->dev,
 				"%s: seperate cm1 test open / short test result\n", __func__);
 
-		snprintf(info->print_buf, sizeof(info->print_buf), "%s", "CONT");
+		snprintf(info->print_buf, 4096, "%s", "CONT");
 		sec_cmd_set_cmd_result(sec, info->print_buf, strlen(info->print_buf));
 		sec->cmd_state = SEC_CMD_STATUS_OK;
 		snprintf(result, sizeof(result), "RESULT=FAIL");
