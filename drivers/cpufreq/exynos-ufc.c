@@ -75,9 +75,6 @@ static ssize_t show_cpufreq_min_limit(struct kobject *kobj,
 	return snprintf(buf, PAGE_SIZE, "%d\n", ufc_req.last_min_input);
 }
 
-static struct kpp kpp_ta;
-static struct kpp kpp_fg;
-
 static ssize_t store_cpufreq_min_limit(struct kobject *kobj,
 				struct kobj_attribute *attr, const char *buf,
 				size_t count)
@@ -147,8 +144,6 @@ static ssize_t store_cpufreq_min_limit(struct kobject *kobj,
 		/* Clear all constraint by cpufreq_min_limit */
 		if (input < 0) {
 			pm_qos_update_request(&domain->user_min_qos_req, 0);
-			kpp_request(STUNE_TOPAPP, &kpp_ta, 0);
-			kpp_request(STUNE_FOREGROUND, &kpp_fg, 0);
 			continue;
 		}
 
@@ -177,9 +172,6 @@ static ssize_t store_cpufreq_min_limit(struct kobject *kobj,
 
 		freq = min(freq, domain->max_freq);
 		pm_qos_update_request(&domain->user_min_qos_req, freq);
-
-		kpp_request(STUNE_TOPAPP, &kpp_ta, domain->user_boost);
-		kpp_request(STUNE_FOREGROUND, &kpp_fg, domain->user_boost);
 
 		set_max = true;
 	}

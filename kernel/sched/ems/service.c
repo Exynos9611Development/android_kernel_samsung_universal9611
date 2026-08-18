@@ -29,70 +29,6 @@ static inline int get_uclamp_boost_level(struct task_struct *p)
 	return 0;
 }
 
-/**********************************************************************
- *                        Kernel Prefer Perf                          *
- **********************************************************************/
-struct plist_head kpp_list[STUNE_GROUP_COUNT];
-
-static bool kpp_en;
-
-int kpp_status(int grp_idx)
-{
-	if (unlikely(!kpp_en))
-		return 0;
-
-	if (grp_idx >= STUNE_GROUP_COUNT)
-		return -EINVAL;
-
-	if (plist_head_empty(&kpp_list[grp_idx]))
-		return 0;
-
-	return plist_last(&kpp_list[grp_idx])->prio;
-}
-
-static DEFINE_SPINLOCK(kpp_lock);
-
-void kpp_request(int grp_idx, struct kpp *req, int value)
-{
-	unsigned long flags;
-
-	if (unlikely(!kpp_en))
-		return;
-
-	if (grp_idx >= STUNE_GROUP_COUNT)
-		return;
-
-	if (req->active && req->node.prio == value && req->grp_idx == grp_idx)
-		return;
-
-	spin_lock_irqsave(&kpp_lock, flags);
-
-	/*
-	 * If the request already added to the list updates the value, remove
-	 * the request from the list and add it again.
-	 */
-	if (req->active)
-		plist_del(&req->node, &kpp_list[req->grp_idx]);
-	else
-		req->active = 1;
-
-	plist_node_init(&req->node, value);
-	plist_add(&req->node, &kpp_list[grp_idx]);
-	req->grp_idx = grp_idx;
-
-	spin_unlock_irqrestore(&kpp_lock, flags);
-}
-
-static void __init init_kpp(void)
-{
-	int i;
-
-	for (i = 0; i < STUNE_GROUP_COUNT; i++)
-		plist_head_init(&kpp_list[i]);
-
-	kpp_en = 1;
-}
-
 struct prefer_perf {
 	int			boost;
 	unsigned int		threshold;
@@ -230,23 +166,6 @@ out:
 	return service_cpu;
 }
 
-static ssize_t show_kpp(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-	int i, ret = 0;
-
-	/* shows the prefer_perf value of all uclamp groups */
-	for (i = 0; i < STUNE_GROUP_COUNT; i++)
-		ret += snprintf(buf + ret, 10, "%d ", kpp_status(i));
-
-	ret += snprintf(buf + ret, 10, "\n");
-
-	return ret;
-}
-
-static struct kobj_attribute kpp_attr =
-__ATTR(kernel_prefer_perf, 0444, show_kpp, NULL);
-
 static void __init build_prefer_cpus(void)
 {
 	struct device_node *ems_dn, *dn, *child;
@@ -313,16 +232,7 @@ next:
 
 static int __init init_service(void)
 {
-	int ret;
-
-	init_kpp();
-
 	build_prefer_cpus();
-
-	ret = sysfs_create_file(ems_kobj, &kpp_attr.attr);
-	if (ret)
-		pr_err("%s: failed to create sysfs file\n", __func__);
-
 	return 0;
 }
 late_initcall(init_service);

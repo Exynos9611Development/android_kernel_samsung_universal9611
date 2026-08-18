@@ -91,12 +91,8 @@ static struct kpp kpp_fg;
 			pr_booster("[Input Booster2] ******      set_ehmp : %d ( %s )\n", enable, __FUNCTION__); \
 			if (enable) { \
 				hmp_boost_value++; \
-				kpp_request(STUNE_TOPAPP, &kpp_ta, 1); \
-				kpp_request(STUNE_FOREGROUND, &kpp_fg, 1); \
 			} else { \
 				hmp_boost_value--; \
-				kpp_request(STUNE_TOPAPP, &kpp_ta, 0); \
-				kpp_request(STUNE_FOREGROUND, &kpp_fg, 0); \
 			} \
 			current_hmp_boost = enable; \
 		} \
