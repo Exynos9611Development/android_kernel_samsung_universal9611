@@ -72,6 +72,7 @@ struct sugov_cpu {
 	unsigned long util;
 	unsigned long max;
 	unsigned int flags;
+	unsigned long bw_dl;
 
 	/* The field below is for single-CPU policies only. */
 #ifdef CONFIG_NO_HZ_COMMON
@@ -433,6 +434,16 @@ static bool sugov_cpu_is_busy(struct sugov_cpu *sg_cpu)
 static inline bool sugov_cpu_is_busy(struct sugov_cpu *sg_cpu) { return false; }
 #endif /* CONFIG_NO_HZ_COMMON */
 
+/*
+ * Make sugov_should_update_freq() ignore the rate limit when DL
+ * has increased the utilization.
+ */
+static inline void ignore_dl_rate_limit(struct sugov_cpu *sg_cpu, struct sugov_policy *sg_policy)
+{
+	if (cpu_bw_dl(cpu_rq(sg_cpu->cpu)) > sg_cpu->bw_dl)
+		sg_policy->need_freq_update = true;
+}
+
 static unsigned int sugov_next_freq_shared(struct sugov_cpu *sg_cpu, u64 time)
 {
 	struct sugov_policy *sg_policy = sg_cpu->sg_policy;
@@ -477,6 +488,8 @@ static void sugov_update_shared(struct update_util_data *hook, u64 time,
 	sg_cpu->max = max;
 	sg_cpu->flags = flags;
 
+	ignore_dl_rate_limit(sg_cpu, sg_policy);
+
 	sugov_set_iowait_boost(sg_cpu, time, flags);
 	sg_cpu->last_update = time;
 
@@ -484,6 +497,7 @@ static void sugov_update_shared(struct update_util_data *hook, u64 time,
 		if (flags & SCHED_CPUFREQ_DL)
 			next_f = sg_policy->policy->cpuinfo.max_freq;
 		else {
+			sg_cpu->bw_dl = cpu_bw_dl(cpu_rq(sg_cpu->cpu));
 			next_f = sugov_next_freq_shared(sg_cpu, time);
 
 			/*
