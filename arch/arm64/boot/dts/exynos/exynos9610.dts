@@ -371,7 +371,17 @@
 				prefer-perf0 {
 					boost = <1>;
 					light-task-threshold = <0>;
+					prefer-cpus = "0-3", "4-7";
+				};
+				prefer-perf1 {
+					boost = <2>;
+					light-task-threshold = <0>;
 					prefer-cpus = "4-7", "0-3";
+				};
+				prefer-perf2 {
+					boost = <3>;
+					light-task-threshold = <0>;
+					prefer-cpus = "4-7";
 				};
 			};
 		};
