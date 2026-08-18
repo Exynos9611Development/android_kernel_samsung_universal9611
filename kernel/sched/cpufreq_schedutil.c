@@ -346,6 +346,12 @@ static void sugov_get_util(unsigned long *util, unsigned long *max, int cpu)
 #ifdef CONFIG_SCHED_TUNE
 	*util = stune_util(cpu);
 #else
+	if (!uclamp_is_used() && rt_rq_is_runnable(&rq->rt)) {
+		*util = max_cap;
+		*max = max_cap;
+		return;
+	}
+
 	*util = cpu_util_freq(cpu);
 #endif
 	*util = min(*util, max_cap);
