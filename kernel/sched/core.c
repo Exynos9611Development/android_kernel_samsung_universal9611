@@ -41,7 +41,6 @@
 #include <linux/sec_debug.h>
 
 #include "sched.h"
-#include "tune.h"
 #include "../workqueue_internal.h"
 #include "../smpboot.h"
 
@@ -1528,36 +1527,22 @@ static void __setscheduler_uclamp(struct task_struct *p,
 				  const struct sched_attr *attr) { }
 static inline void uclamp_fork(struct task_struct *p) { }
 
-long schedtune_task_margin(struct task_struct *task);
-
 #ifdef CONFIG_SMP
 unsigned int uclamp_task(struct task_struct *p)
 {
 	unsigned long util = task_util_est(p);
-#ifdef CONFIG_SCHED_TUNE
-	long margin = schedtune_task_margin(p);
 
-	trace_sched_boost_task(p, util, margin);
-
-	util += margin;
-#endif
-
-	return util;
+	return clamp(util, uclamp_eff_value(p, UCLAMP_MIN),
+		    uclamp_eff_value(p, UCLAMP_MAX));
 }
 
 bool uclamp_boosted(struct task_struct *p)
 {
-#ifdef CONFIG_SCHED_TUNE
-	return schedtune_task_boost(p) > 0;
-#endif
 	return false;
 }
 
 bool uclamp_latency_sensitive(struct task_struct *p)
 {
-#ifdef CONFIG_SCHED_TUNE
-	return schedtune_prefer_idle(p) != 0;
-#endif
 	return false;
 }
 #endif /* CONFIG_SMP */

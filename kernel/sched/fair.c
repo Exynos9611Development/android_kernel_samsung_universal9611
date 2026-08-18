@@ -44,7 +44,6 @@
 #include <soc/samsung/exynos-emc.h>
 
 #include "sched.h"
-#include "tune.h"
 #include "walt.h"
 
 /*
@@ -3234,7 +3233,7 @@ __update_load_avg_se(u64 now, int cpu, struct cfs_rq *cfs_rq, struct sched_entit
 	if (___update_load_avg(now, cpu, &se->avg,
 			       se->on_rq * scale_load_down(se->load.weight),
 			       cfs_rq->curr == se, NULL, NULL)) {
-		if (entity_is_task(se) && schedtune_util_est_en(task_of(se)))
+		if (entity_is_task(se))
 			cfs_se_util_change(&se->avg);
 
 #ifdef UTIL_EST_DEBUG
@@ -3971,8 +3970,7 @@ inline unsigned long _task_util_est(struct task_struct *p)
 {
 	struct util_est ue = READ_ONCE(p->se.avg.util_est);
 
-	return schedtune_util_est_en(p) ? max(ue.ewma, ue.enqueued)
-					: task_util(p);
+	return max(ue.ewma, ue.enqueued);
 }
 
 unsigned long task_util_est(struct task_struct *p)
@@ -3982,8 +3980,7 @@ unsigned long task_util_est(struct task_struct *p)
 		return (p->ravg.demand /
 			(walt_ravg_window >> SCHED_CAPACITY_SHIFT));
 #endif
-	return schedtune_util_est_en(p) ? max(READ_ONCE(p->se.avg.util_avg), _task_util_est(p))
-					: task_util(p);
+	return max(READ_ONCE(p->se.avg.util_avg), _task_util_est(p));
 }
 
 #ifdef CONFIG_UCLAMP_TASK
@@ -4052,9 +4049,6 @@ util_est_dequeue(struct cfs_rq *cfs_rq, struct task_struct *p, bool task_sleep)
 	 * yet completed an activation, e.g. being migrated.
 	 */
 	if (!task_sleep)
-		return;
-
-	if (!schedtune_util_est_en(p))
 		return;
 
 	/*
@@ -5632,24 +5626,6 @@ enqueue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 	util_est_enqueue(&rq->cfs, p);
 
 	/*
-	 * The code below (indirectly) updates schedutil which looks at
-	 * the cfs_rq utilization to select a frequency.
-	 * Let's update schedtune here to ensure the boost value of the
-	 * current task is accounted for in the selection of the OPP.
-	 *
-	 * We do it also in the case where we enqueue a throttled task;
-	 * we could argue that a throttled task should not boost a CPU,
-	 * however:
-	 * a) properly implementing CPU boosting considering throttled
-	 *    tasks will increase a lot the complexity of the solution
-	 * b) it's not easy to quantify the benefits introduced by
-	 *    such a more complex solution.
-	 * Thus, for the time being we go for the simple solution and boost
-	 * also for throttled RQs.
-	 */
-	schedtune_enqueue_task(p, cpu_of(rq));
-
-	/*
 	 * If in_iowait is set, the code below may not trigger any cpufreq
 	 * utilization updates, so do it here explicitly with the IOWAIT flag
 	 * passed.
@@ -5711,14 +5687,6 @@ static void dequeue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 	struct cfs_rq *cfs_rq;
 	struct sched_entity *se = &p->se;
 	int task_sleep = flags & DEQUEUE_SLEEP;
-
-	/*
-	 * The code below (indirectly) updates schedutil which looks at
-	 * the cfs_rq utilization to select a frequency.
-	 * Let's update schedtune here to ensure the boost value of the
-	 * current task is not more accounted for in the selection of the OPP.
-	 */
-	schedtune_dequeue_task(p, cpu_of(rq));
 
 	for_each_sched_entity(se) {
 		cfs_rq = cfs_rq_of(se);
@@ -7005,81 +6973,7 @@ static int wake_affine(struct sched_domain *sd, struct task_struct *p,
 	return affine;
 }
 
-#ifdef CONFIG_SCHED_TUNE
-struct reciprocal_value schedtune_spc_rdiv;
 
-long
-schedtune_margin(unsigned long signal, long boost)
-{
-	long long margin = 0;
-
-	/*
-	 * Signal proportional compensation (SPC)
-	 *
-	 * The Boost (B) value is used to compute a Margin (M) which is
-	 * proportional to the complement of the original Signal (S):
-	 *   M = B * (SCHED_CAPACITY_SCALE - S)
-	 * The obtained M could be used by the caller to "boost" S.
-	 */
-	if (boost >= 0) {
-		margin  = SCHED_CAPACITY_SCALE - signal;
-		margin *= boost;
-	} else
-		margin = -signal * boost;
-
-	margin  = reciprocal_divide(margin, schedtune_spc_rdiv);
-
-	if (boost < 0)
-		margin *= -1;
-	return margin;
-}
-
-static inline int
-schedtune_cpu_margin(unsigned long util, int cpu)
-{
-	int boost = schedtune_cpu_boost(cpu);
-
-	if (boost == 0)
-		return 0;
-
-	return schedtune_margin(util, boost);
-}
-
-long schedtune_task_margin(struct task_struct *task)
-{
-	int boost = schedtune_task_boost(task);
-	unsigned long util;
-	long margin;
-
-	if (boost == 0)
-		return 0;
-
-	util = task_util_est(task);
-	margin = schedtune_margin(util, boost);
-
-	return margin;
-}
-
-#else /* CONFIG_SCHED_TUNE */
-
-static inline int
-schedtune_cpu_margin(unsigned long util, int cpu)
-{
-	return 0;
-}
-
-#endif /* CONFIG_SCHED_TUNE */
-
-unsigned long
-stune_util(int cpu)
-{
-	unsigned long util = cpu_util_freq(cpu);
-	long margin = schedtune_cpu_margin(util, cpu);
-
-	trace_sched_boost_cpu(cpu, util, margin);
-
-	return util + margin;
-}
 
 static unsigned long cpu_util_without(int cpu, struct task_struct *p);
 
@@ -9118,7 +9012,6 @@ int can_migrate_task(struct task_struct *p, struct lb_env *env)
 
 	/*
 	 * We do not migrate tasks that are:
-	 * 0) cannot be migrated to smaller capacity cpu due to schedtune.prefer_perf, or
 	 * 1) throttled_lb_pair, or
 	 * 2) cannot be migrated to this CPU due to cpus_allowed, or
 	 * 3) running (obviously), or
@@ -9127,11 +9020,9 @@ int can_migrate_task(struct task_struct *p, struct lb_env *env)
 	if (!ontime_can_migration(p, env->dst_cpu))
 		return 0;
 
-#ifdef CONFIG_SCHED_TUNE
 	if (smaller_cpu_capacity(env->dst_cpu, env->src_cpu) &&
-	    schedtune_prefer_perf(p))
+	    uclamp_eff_value(p, UCLAMP_MIN) > capacity_orig_of(env->dst_cpu))
 		return 0;
-#endif
 
 	if (throttled_lb_pair(task_group(p), env->src_cpu, env->dst_cpu))
 		return 0;

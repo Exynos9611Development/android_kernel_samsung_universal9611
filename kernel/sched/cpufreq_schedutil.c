@@ -20,7 +20,6 @@
 #include <trace/events/power.h>
 
 #include "sched.h"
-#include "tune.h"
 
 #define IOWAIT_BOOST_MIN	(SCHED_CAPACITY_SCALE / 8)
 
@@ -245,7 +244,7 @@ static int sugov_select_scaling_cpu(void)
 	/* Idle core of the boot cluster is selected to scaling cpu */
 	for_each_cpu(cpu, &mask) {
 		rt = sched_get_rt_rq_util(cpu);
-		util = boosted_cpu_util(cpu);
+		util = cpu_util_freq(cpu);
 		if (util < min) {
 			min = util;
 			candidate = cpu;
@@ -343,9 +342,6 @@ static void sugov_get_util(unsigned long *util, unsigned long *max, int cpu)
 
 	max_cap = arch_scale_cpu_capacity(NULL, cpu);
 
-#ifdef CONFIG_SCHED_TUNE
-	*util = stune_util(cpu);
-#else
 	if (!uclamp_is_used() && rt_rq_is_runnable(&rq->rt)) {
 		*util = max_cap;
 		*max = max_cap;
@@ -353,7 +349,6 @@ static void sugov_get_util(unsigned long *util, unsigned long *max, int cpu)
 	}
 
 	*util = cpu_util_freq(cpu);
-#endif
 	*util = min(*util, max_cap);
 	*max = max_cap;
 
