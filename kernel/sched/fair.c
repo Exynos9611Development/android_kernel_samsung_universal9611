@@ -3614,10 +3614,10 @@ int update_rt_rq_load_avg(u64 now, int cpu, struct rt_rq *rt_rq, int running)
 unsigned long sched_get_rt_rq_util(int cpu)
 {
 	struct rt_rq *rt_rq;
-
+#ifdef CONFIG_SCHED_USE_FLUID_RT
 	if (frt_disable_cpufreq)
 		return 0;
-
+#endif
 	rt_rq = &(cpu_rq(cpu)->rt);
 	return rt_rq->avg.util_avg;
 }

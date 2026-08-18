@@ -519,10 +519,10 @@ void lb_newidle_balance(struct rq *dst_rq, struct rq_flags *rf,
 
 	if (dst_rq->nr_running)
 		goto out;
-
+#ifdef CONFIG_SCHED_USE_FLUID_RT
 	if (frt_idle_pull_tasks(dst_rq))
 		goto out;
-
+#endif
 	/* sanity check again after drop rq lock during RT balance */
 	if (dst_rq->nr_running)
 		goto out;
@@ -566,7 +566,9 @@ out:
 
 void update_last_waked_ns_task(struct task_struct *p)
 {
+#ifdef CONFIG_SCHED_USE_FLUID_RT
 	p->last_waked_ns = ktime_get_ns();
+#endif
 }
 
 unsigned long cpu_util(int cpu)
