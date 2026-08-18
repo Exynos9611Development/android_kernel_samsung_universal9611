@@ -23,21 +23,6 @@ struct gb_qos_request {
 	bool active;
 };
 
-#define LEAVE_BAND	0
-
-struct task_band {
-	int id;
-	pid_t tgid;
-	raw_spinlock_t lock;
-
-	struct list_head members;
-	int member_count;
-	struct cpumask playable_cpus;
-
-	unsigned long util;
-	unsigned long last_update_time;
-};
-
 #ifdef CONFIG_SCHED_EMS
 extern struct kobject *ems_kobj;
 extern unsigned int get_cpu_max_capacity(unsigned int cpu);
@@ -70,13 +55,6 @@ extern void update_lbt_overutil(int cpu, unsigned long capacity);
 
 /* global boost */
 extern void gb_qos_update_request(struct gb_qos_request *req, u32 new_value);
-
-/* task band */
-extern void sync_band(struct task_struct *p, bool join);
-extern void newbie_join_band(struct task_struct *newbie);
-extern int alloc_bands(void);
-extern void update_band(struct task_struct *p, long old_util);
-extern int band_playing(struct task_struct *p, int cpu);
 #else
 static inline void exynos_init_entity_util_avg(struct sched_entity *se) { }
 
@@ -114,18 +92,6 @@ static inline bool lbt_overutilized(int cpu, int level)
 static inline void update_lbt_overutil(int cpu, unsigned long capacity) { }
 
 static inline void gb_qos_update_request(struct gb_qos_request *req, u32 new_value) { }
-
-static inline void sync_band(struct task_struct *p, bool join) { }
-static inline void newbie_join_band(struct task_struct *newbie) { }
-static inline int alloc_bands(void)
-{
-	return 0;
-}
-static inline void update_band(struct task_struct *p, long old_util) { }
-static inline int band_playing(struct task_struct *p, int cpu)
-{
-	return 0;
-}
 #endif /* CONFIG_SCHED_EMS */
 
 #ifdef CONFIG_SIMPLIFIED_ENERGY_MODEL

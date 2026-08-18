@@ -24,7 +24,6 @@ extern int global_boosting(struct task_struct *p);
 extern int global_boosted(void);
 extern int select_energy_cpu(struct task_struct *p, int prev_cpu, int sd_flag, int sync);
 extern unsigned int calculate_energy(struct task_struct *p, int target_cpu);
-extern int band_play_cpu(struct task_struct *p);
 extern int ontime_can_migration(struct task_struct *p, int dst_cpu);
 
 extern int prefer_perf_cpu(struct task_struct *p);

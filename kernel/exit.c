@@ -894,7 +894,6 @@ void __noreturn do_exit(long code)
 	}
 
 	exit_signals(tsk);  /* sets PF_EXITING */
-	sync_band(tsk, LEAVE_BAND);
 
 	/*
 	 * Ensure that all new tsk->pi_lock acquisitions must observe

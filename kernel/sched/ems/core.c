@@ -752,7 +752,7 @@ static int select_proper_cpu(struct task_struct *p, int prev_cpu)
 				 * Prefer shallowest idle state first.
 				 * Among CPUs at the same idle depth prefer
 				 * the one with lower utilisation — consistent
-				 * with pcf.c, service.c and band.c — so the
+				 * with pcf.c, service.c — so the
 				 * task gets the most headroom and avoids
 				 * unnecessary frequency scaling.
 				 */
@@ -826,11 +826,7 @@ int exynos_wakeup_balance(struct task_struct *p, int prev_cpu, int sd_flag, int 
 	 * Exclude new task.
 	 */
 	if (!(sd_flag & SD_BALANCE_FORK)) {
-		unsigned long old_util = task_util(p);
-
 		sync_entity_load_avg(&p->se);
-		/* update the band if a large amount of task util is decayed */
-		update_band(p, old_util);
 	}
 
 	target_cpu = select_service_cpu(p);
@@ -870,25 +866,6 @@ int exynos_wakeup_balance(struct task_struct *p, int prev_cpu, int sd_flag, int 
 	target_cpu = prefer_perf_cpu(p);
 	if (cpu_selected(target_cpu)) {
 		strlcpy(state, "prefer-perf", sizeof(state));
-		goto out;
-	}
-
-	/*
-	 * Priority 3 : task band
-	 *
-	 * The tasks in a process are likely to interact, and its operations are
-	 * sequential and share resources. Therefore, if these tasks are packed and
-	 * and assign on a specific cpu or cluster, the latency for interaction
-	 * decreases and the reusability of the cache increases, thereby improving
-	 * performance.
-	 *
-	 * The "task band" is a function that groups tasks on a per-process basis
-	 * and assigns them to a specific cpu or cluster. If the attribute "band"
-	 * of uclamp.cgroup is set to '1', task band operate on this cgroup.
-	 */
-	target_cpu = band_play_cpu(p);
-	if (cpu_selected(target_cpu)) {
-		strlcpy(state, "task band", sizeof(state));
 		goto out;
 	}
 

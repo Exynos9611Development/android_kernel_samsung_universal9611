@@ -197,7 +197,7 @@ static int find_min_util_cpu(struct cpumask *mask, struct task_struct *p,
 		 * Account for uclamp boost: a boosted task needs at least
 		 * boosted_task_util() capacity, regardless of the raw PELT
 		 * estimate.  This matches the capacity check used in every
-		 * other EMS CPU selector (band.c, pcf.c, service.c, etc.).
+		 * other EMS CPU selector (pcf.c, service.c, etc.).
 		 */
 		new_util = max(new_util, boosted_task_util(p));
 
