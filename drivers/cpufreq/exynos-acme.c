@@ -966,9 +966,9 @@ static __init void set_boot_qos(struct exynos_cpufreq_domain *domain)
 		boot_qos = min(boot_qos, val);
 
 	pm_qos_update_request_timeout(&domain->min_qos_req,
-			boot_qos, 40 * USEC_PER_SEC);
+			boot_qos, 10 * USEC_PER_SEC);
 	pm_qos_update_request_timeout(&domain->max_qos_req,
-			boot_qos, 40 * USEC_PER_SEC);
+			boot_qos, 10 * USEC_PER_SEC);
 
 }
 
