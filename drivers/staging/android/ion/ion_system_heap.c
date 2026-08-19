@@ -82,8 +82,28 @@ static struct page *alloc_buffer_page(struct ion_system_heap *heap,
 static void free_buffer_page(struct ion_system_heap *heap,
 			     struct ion_buffer *buffer, struct page *page)
 {
+	struct ion_page_pool *pool;
 	unsigned int order = compound_order(page);
-	__free_pages(page, order);
+	bool cached = ion_buffer_cached(buffer);
+
+	/* go to system */
+	if (buffer->private_flags & ION_PRIV_FLAG_SHRINKER_FREE) {
+		__free_pages(page, order);
+		return;
+	}
+
+	if (cached && (buffer->flags & ION_FLAG_SYNC_FORCE)) {
+		cached = !cached;
+		__flush_dcache_area(page_to_virt(page),
+				    1 << (PAGE_SHIFT + order));
+	}
+
+	if (!cached)
+		pool = heap->uncached_pools[order_to_index(order)];
+	else
+		pool = heap->cached_pools[order_to_index(order)];
+
+	ion_page_pool_free(pool, page);
 }
 
 static struct page *alloc_largest_available(struct ion_system_heap *heap,
