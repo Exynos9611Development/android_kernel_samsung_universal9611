@@ -299,7 +299,7 @@ static int abox_rdma_mailbox_send_cmd(struct device *dev, unsigned int cmd)
 		return -EINVAL;
 	}
 
-	spin_lock(&data->cmd_lock);
+	mutex_lock(&data->cmd_lock);
 
 	abox_rdma_mailbox_write(dev, COMPR_HANDLE_ID, data->handle_id);
 	abox_rdma_mailbox_write(dev, COMPR_CMD_CODE, cmd);
@@ -311,12 +311,12 @@ static int abox_rdma_mailbox_send_cmd(struct device *dev, unsigned int cmd)
 			ack = 1;
 			break;
 		}
-		udelay(100);
+		usleep_range(100, 200);
 	}
 	/* clear ACK */
 	abox_rdma_mailbox_write(dev, COMPR_ACK, 0);
 
-	spin_unlock(&data->cmd_lock);
+	mutex_unlock(&data->cmd_lock);
 
 	if (!ack) {
 		dev_err(dev, "%s: No ack error!(%x)", __func__, cmd);
@@ -1997,7 +1997,7 @@ static int samsung_abox_rdma_probe(struct platform_device *pdev)
 	data->abox_data = platform_get_drvdata(data->pdev_abox);
 
 	spin_lock_init(&data->compr_data.lock);
-	spin_lock_init(&data->compr_data.cmd_lock);
+	mutex_init(&data->compr_data.cmd_lock);
 	init_waitqueue_head(&data->compr_data.flush_wait);
 	init_waitqueue_head(&data->compr_data.exit_wait);
 	init_waitqueue_head(&data->compr_data.ipc_wait);
