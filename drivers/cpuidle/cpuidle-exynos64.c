@@ -145,11 +145,11 @@ static int __init exynos_idle_driver_init(struct cpuidle_driver *drv,
 {
 	int cpu = cpumask_first(cpumask);
 
-	drv->name = kzalloc(sizeof("exynos_idleX"), GFP_KERNEL);
+	drv->name = kzalloc(CPUIDLE_NAME_LEN, GFP_KERNEL);
 	if (!drv->name)
 		return -ENOMEM;
 
-	scnprintf((char *)drv->name, 12, "exynos_idle%d", cpu);
+	scnprintf((char *)drv->name, CPUIDLE_NAME_LEN, "exynos_idle%d", cpu);
 	drv->owner = THIS_MODULE;
 	drv->cpumask = cpumask;
 	exynos_idle_wfi_state(drv->states[0]);
