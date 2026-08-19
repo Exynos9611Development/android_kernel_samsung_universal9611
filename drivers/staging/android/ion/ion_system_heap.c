@@ -98,6 +98,11 @@ static void free_buffer_page(struct ion_system_heap *heap,
 				    1 << (PAGE_SHIFT + order));
 	}
 
+	if (order >= 8) {
+    	__free_pages(page, order); 
+    	return;
+	}
+
 	if (!cached)
 		pool = heap->uncached_pools[order_to_index(order)];
 	else
