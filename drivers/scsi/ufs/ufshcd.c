@@ -4863,7 +4863,7 @@ static int ufshcd_complete_dev_init(struct ufs_hba *hba)
 					QUERY_FLAG_IDN_FDEVICEINIT, &flag_res);
 		if (!flag_res)
 			break;
-		usleep_range(1000, 1000);
+		usleep_range(1000, 2000);
 	} while (time_before(jiffies, timeout));
 
 	if (err) {
