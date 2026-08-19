@@ -70,6 +70,12 @@ static ssize_t prox_power_off_store(struct device *dev,
 
 	info->prox_power_off = data;
 
+	if (data == 0 && info->input_dev_proximity) {
+		input_report_abs(info->input_dev_proximity, ABS_MT_CUSTOM, 1);
+		input_report_abs(info->input_dev_proximity, ABS_DISTANCE, 1);
+		input_sync(info->input_dev_proximity);
+	}
+
 	return count;
 }
 

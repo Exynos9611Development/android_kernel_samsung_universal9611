@@ -648,6 +648,9 @@ int mms_custom_event_handler(struct mms_ts_info *info, u8 *rbuf, u8 size)
 			input_report_key(info->input_dev, KEY_BLACK_UI_GESTURE, 1);
 			input_sync(info->input_dev);
 		} else if (gesture_type == MMS_GESTURE_CODE_PRESS) {
+			int center_x = (info->fod_rect_data[0] + info->fod_rect_data[2]) / 2;
+			int center_y = (info->fod_rect_data[1] + info->fod_rect_data[3]) / 2;
+
 			if (gesture_id == MMS_GESTURE_ID_FOD_LONG || gesture_id == MMS_GESTURE_ID_FOD_NORMAL) {
 				info->scrub_id = SPONGE_EVENT_TYPE_FOD;
 				input_info(true, &info->client->dev, "%s: FOD: %s\n", __func__, gesture_id ? "normal" : "long");
@@ -656,6 +659,13 @@ int mms_custom_event_handler(struct mms_ts_info *info, u8 *rbuf, u8 size)
 				sysfs_notify(&info->sec.fac_dev->kobj, NULL, "fod_pressed");
 #endif
 				input_report_key(info->input_dev, KEY_BLACK_UI_GESTURE, 1);
+				if (center_x > 0 && center_y > 0) {
+					input_mt_slot(info->input_dev, 0);
+					input_mt_report_slot_state(info->input_dev, MT_TOOL_FINGER, true);
+					input_report_abs(info->input_dev, ABS_MT_POSITION_X, center_x);
+					input_report_abs(info->input_dev, ABS_MT_POSITION_Y, center_y);
+					input_report_abs(info->input_dev, ABS_MT_TOUCH_MAJOR, 50);
+				}
 				input_sync(info->input_dev);
 			} else if (gesture_id == MMS_GESTURE_ID_FOD_RELEASE) {
 				info->scrub_id = SPONGE_EVENT_TYPE_FOD_RELEASE;
@@ -665,11 +675,16 @@ int mms_custom_event_handler(struct mms_ts_info *info, u8 *rbuf, u8 size)
 				sysfs_notify(&info->sec.fac_dev->kobj, NULL, "fod_pressed");
 #endif
 				input_report_key(info->input_dev, KEY_BLACK_UI_GESTURE, 1);
+				input_mt_slot(info->input_dev, 0);
+				input_mt_report_slot_state(info->input_dev, MT_TOOL_FINGER, false);
 				input_sync(info->input_dev);
 			} else if (gesture_id == MMS_GESTURE_ID_FOD_OUT) {
 				info->scrub_id = SPONGE_EVENT_TYPE_FOD_OUT;
 				input_info(true, &info->client->dev, "%s: FOD OUT\n", __func__);
 				input_report_key(info->input_dev, KEY_BLACK_UI_GESTURE, 1);
+				
+				input_mt_slot(info->input_dev, 0);
+				input_mt_report_slot_state(info->input_dev, MT_TOOL_FINGER, false);
 				input_sync(info->input_dev);
 			}
 		}

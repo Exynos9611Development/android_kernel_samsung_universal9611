@@ -807,6 +807,13 @@ static int mms_alert_handler_pocket_mode_state(struct mms_ts_info *info, u8 data
 
 	if (data == IN_POCKET || data == OUT_POCKET) {
 		input_report_abs(info->input_dev_proximity, ABS_MT_CUSTOM, data);
+		
+		if (data == IN_POCKET) {
+			input_report_abs(info->input_dev_proximity, ABS_DISTANCE, 0); /* NEAR */
+		} else if (data == OUT_POCKET) {
+			input_report_abs(info->input_dev_proximity, ABS_DISTANCE, 1); /* FAR */
+		}
+		
 		input_sync(info->input_dev_proximity);
 	}
 
@@ -845,6 +852,7 @@ static int mms_alert_handler_proximity_state(struct mms_ts_info *info, u8 data)
 	info->hover_event = data;
 
 	input_report_abs(info->input_dev_proximity, ABS_MT_CUSTOM, data);
+	input_report_abs(info->input_dev_proximity, ABS_DISTANCE, data);
 	input_sync(info->input_dev_proximity);
 	return 0;
 }
@@ -1442,6 +1450,7 @@ static void mms_set_input_prop_proximity(struct mms_ts_info *info, struct input_
 	set_bit(INPUT_PROP_DIRECT, dev->propbit);
 
 	input_set_abs_params(dev, ABS_MT_CUSTOM, 0, 0xFFFFFFFF, 0, 0);
+	input_set_abs_params(dev, ABS_DISTANCE, 0, 1, 0, 0);
 	input_set_drvdata(dev, info);
 }
 
