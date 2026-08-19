@@ -782,7 +782,8 @@ int mms_parse_devicetree(struct device *dev, struct mms_ts_info *info)
 	info->dtdata->support_ear_detect = of_property_read_bool(np, "support_ear_detect_mode");
 	info->dtdata->support_fod = of_property_read_bool(np, "support_fod");	
 	info->dtdata->enable_settings_aot = of_property_read_bool(np, "enable_settings_aot");
-	info->dtdata->sync_reportrate_120 = of_property_read_bool(np, "sync-reportrate-120");
+	/* hack for 120 Hz polling rate*/
+	info->dtdata->sync_reportrate_120 = true;
 	info->dtdata->support_open_short_test = of_property_read_bool(np, "support_open_short_test");
 	info->dtdata->no_vsync = of_property_read_bool(np, "melfas,no_vsync");
 	info->dtdata->support_protos = of_property_read_bool(np, "melfas,support_protos");
