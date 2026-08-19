@@ -472,6 +472,7 @@ static int exynos_cpufreq_target(struct cpufreq_policy *policy,
 static int __exynos_cpufreq_suspend(struct exynos_cpufreq_domain *domain)
 {
 	unsigned int freq;
+	int retry = 10;
 
 	if (!domain)
 		return -EINVAL;
@@ -487,10 +488,16 @@ static int __exynos_cpufreq_suspend(struct exynos_cpufreq_domain *domain)
 
 	/* To sync current freq with resume freq, check until they become same */
 	mutex_lock(&domain->lock);
-	while (domain->old > freq) {
+	while (domain->old > freq && retry > 0) {
 		mutex_unlock(&domain->lock);
 		update_freq(domain, freq);
 		mutex_lock(&domain->lock);
+		retry--;
+	}
+
+	if (retry == 0) {
+		pr_err("exynos-acme: failed to drop freq to %d during suspend\n", freq);
+		domain->old = freq;
 	}
 
 	/*
