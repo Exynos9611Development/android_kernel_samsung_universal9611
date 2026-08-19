@@ -657,7 +657,7 @@ p_retry:
 		mginfo("next frame(F%d) is on process1(%lX %lX), waiting...\n", group, group,
 			next_frame->fcount, next_frame->bak_flag, next_frame->out_flag);
 		fimc_is_group_unlock(group, flags, FIMC_IS_DEVICE_MAX, true);
-		usleep_range(1000, 1000);
+		usleep_range(1000, 2000);
 		wait_count--;
 		goto p_retry;
 	}
@@ -667,7 +667,7 @@ p_retry:
 		mginfo("next frame(F%d) is on process2(%lX %lX), waiting...\n", group, group,
 			next_frame->fcount, next_frame->bak_flag, next_frame->out_flag);
 		fimc_is_group_unlock(group, flags, FIMC_IS_DEVICE_MAX, true);
-		usleep_range(1000, 1000);
+		usleep_range(1000, 2000);
 		wait_count--;
 		goto p_retry;
 	}
@@ -677,7 +677,7 @@ p_retry:
 		mginfo("prev frame(F%d) is on process(%lX %lX), waiting...\n", group, group,
 			prev_frame->fcount, prev_frame->bak_flag, prev_frame->out_flag);
 		fimc_is_group_unlock(group, flags, FIMC_IS_DEVICE_MAX, true);
-		usleep_range(1000, 1000);
+		usleep_range(1000, 2000);
 		wait_count--;
 		goto p_retry;
 	}
