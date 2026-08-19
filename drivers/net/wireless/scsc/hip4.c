@@ -1589,7 +1589,7 @@ static int hip4_napi_poll(struct napi_struct *napi, int budget)
 #ifdef CONFIG_SCSC_SMAPPER
 			hip4_smapper_free_mapped_skb(skb);
 #endif
-			kfree_skb(skb);
+			dev_kfree_skb_any(skb);
 		}
 consume_dat_mbulk:
 		/* Increase index */
@@ -1598,14 +1598,15 @@ consume_dat_mbulk:
 
 		while ((ref = to_free[i++])) {
 			/* Set the number of retries */
-			retry = FB_NO_SPC_NUM_RET;
-			while (hip4_q_add_signal(hip, HIP4_MIF_Q_TH_RFB, ref, service) && (!atomic_read(&hip->hip_priv->closing)) && (retry > 0)) {
-				SLSI_WARN_NODEV("Dat: Not enough space in FB, retry: %d/%d\n", retry, FB_NO_SPC_NUM_RET);
-				udelay(FB_NO_SPC_DELAY_US);
+			retry = 100;
+			while (hip4_q_add_signal(hip, HIP4_MIF_Q_TH_RFB, ref, service) && 
+			       (!atomic_read(&hip->hip_priv->closing)) && (retry > 0)) {
+				cpu_relax();
 				retry--;
+			}
 
-				if (retry == 0)
-					SLSI_ERR_NODEV("Dat: FB has not been freed for %d us\n", FB_NO_SPC_NUM_RET * FB_NO_SPC_DELAY_US);
+			if (retry == 0) {
+				SLSI_ERR_NODEV("Dat: FB has not been freed for %d us\n", FB_NO_SPC_NUM_RET * FB_NO_SPC_DELAY_US);
 #ifdef CONFIG_SCSC_WLAN_HIP4_PROFILING
 				SCSC_HIP4_SAMPLER_QFULL(hip_priv->minor, HIP4_MIF_Q_TH_RFB);
 #endif
