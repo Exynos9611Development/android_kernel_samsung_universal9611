@@ -1006,7 +1006,7 @@ static void g2d_wait_finish(struct g2d_data *g2d, struct drm_file *file)
 
 	/* Wait for the G2D engine to finish. */
 	while (tries-- && (g2d->runqueue_node == runqueue_node))
-		mdelay(10);
+		usleep_range(10000, 10000);
 
 	mutex_lock(&g2d->runqueue_mutex);
 
