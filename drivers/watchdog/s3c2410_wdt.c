@@ -811,7 +811,7 @@ s3c2410_get_wdt_drv_data(struct platform_device *pdev)
 
 	return variant;
 }
-
+#ifdef CONFIG_DEBUG_SNAPSHOT
 int s3c2410wdt_set_emergency_stop(int index)
 {
 	struct s3c2410_wdt *wdt = s3c_wdt[index];
@@ -890,7 +890,7 @@ int s3c2410wdt_emergency_multistage_wdt_start(void)
 
 	return 0;
 }
-
+#endif
 
 static int s3c2410wdt_get_multistage_index(void)
 {

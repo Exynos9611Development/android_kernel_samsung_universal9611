@@ -14,10 +14,11 @@
 #ifndef DEBUG_SNAPSHOT_H
 #define DEBUG_SNAPSHOT_H
 
-#ifdef CONFIG_DEBUG_SNAPSHOT
 #include <asm/ptrace.h>
 #include <linux/bug.h>
 #include "debug-snapshot-binder.h"
+
+#ifdef CONFIG_DEBUG_SNAPSHOT
 
 /* mandatory */
 extern void dbg_snapshot_task(int cpu, void *v_task);
@@ -162,16 +163,6 @@ void dbg_snapshot_check_crash_key(unsigned int code, int value);
 #define dbg_snapshot_check_crash_key(a,b)	do { } while(0)
 #endif
 
-#ifdef CONFIG_S3C2410_WATCHDOG
-extern int s3c2410wdt_set_emergency_stop(int index);
-extern int s3c2410wdt_set_emergency_reset(unsigned int timeout, int index);
-extern int s3c2410wdt_keepalive_emergency(bool reset, int index);
-#else
-#define s3c2410wdt_set_emergency_stop(a) 	(-1)
-#define s3c2410wdt_set_emergency_reset(a, b)	do { } while(0)
-#define s3c2410wdt_keepalive_emergency(a, b)	do { } while(0)
-#endif
-
 #ifdef CONFIG_DEBUG_SNAPSHOT_BINDER
 extern void dbg_snapshot_binder(struct trace_binder_transaction_base *base,
 				struct trace_binder_transaction *transaction,
@@ -198,6 +189,7 @@ extern void dbg_snapshot_get_softlockup_info(unsigned int cpu, void *info);
 #define dbg_snapshot_regulator(a,b,c,d,e,f)	do { } while(0)
 #define dbg_snapshot_thermal(a,b,c,d)	do { } while(0)
 #define dbg_snapshot_irq(a,b,c,d,e)		do { } while(0)
+#define dbg_snapshot_print_notifier_call(a,b,c)		do { } while(0)
 #define dbg_snapshot_irqs_disabled(a)	do { } while(0)
 #define dbg_snapshot_spinlock(a,b)		do { } while(0)
 #define dbg_snapshot_clk(a,b,c,d)		do { } while(0)
@@ -271,6 +263,25 @@ static inline void dbg_snapshot_spin_func(void) {do {wfi();} while(1);}
 extern struct atomic_notifier_head restart_handler_list;
 extern struct blocking_notifier_head reboot_notifier_list;
 extern struct blocking_notifier_head pm_chain_head;
+
+#if defined(CONFIG_S3C2410_WATCHDOG) && defined(CONFIG_DEBUG_SNAPSHOT)
+extern int s3c2410wdt_set_emergency_stop(int index);
+#ifdef CONFIG_SEC_DEBUG
+extern int __s3c2410wdt_set_emergency_reset(unsigned int timeout_cnt, int index, unsigned long addr);
+#endif
+extern int s3c2410wdt_set_emergency_reset(unsigned int timeout, int index);
+extern int s3c2410wdt_keepalive_emergency(bool reset, int index);
+extern void s3c2410wdt_reset_confirm(unsigned long mtime, int index);
+extern int s3c2410wdt_emergency_multistage_wdt_stop(void);
+extern int s3c2410wdt_emergency_multistage_wdt_start(void);
+#else
+#define s3c2410wdt_set_emergency_stop(a) 	(-1)
+#define s3c2410wdt_set_emergency_reset(a, b)	do { } while(0)
+#define s3c2410wdt_keepalive_emergency(a, b)	do { } while(0)
+#define s3c2410wdt_reset_confirm(a, b)		do { } while(0)
+#define s3c2410wdt_emergency_multistage_wdt_stop()		do { } while (0)
+#define s3c2410wdt_emergency_multistage_wdt_start()		do { } while (0)
+#endif
 
 #ifdef CONFIG_EXYNOS_ITMON
 extern struct atomic_notifier_head itmon_notifier_list;
