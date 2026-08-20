@@ -157,7 +157,7 @@ enum {
 	UMOUNT_STATUS_MAX
 };
 
-static const char *umount_exit_str[UMOUNT_STATUS_MAX] = {
+static const char *umount_exit_str[UMOUNT_STATUS_MAX] __maybe_unused = {
 	"ADDED_TASK", "REMAIN_NS", "REMAIN_CNT", "DELAY_TASK"
 };
 
@@ -189,14 +189,14 @@ static inline void sys_umount_trace_print(struct mount *mnt, int flags)
 	int mnt_flags = mnt->mnt->mnt_flags;
 #else
 	struct super_block *sb = mnt->mnt.mnt_sb;
-	int mnt_flags = mnt->mnt.mnt_flags;
+	int mnt_flags __maybe_unused = mnt->mnt.mnt_flags;
 #endif
 	/* We don`t want to see what zygote`s umount */
 	if (((sb->s_magic == SDFAT_SUPER_MAGIC) ||
 		(sb->s_magic == MSDOS_SUPER_MAGIC)) &&
 		((current_uid().val == 0) && !is_exception(current->comm))) {
 		struct block_device *bdev = sb->s_bdev;
-		dev_t bd_dev = bdev ? bdev->bd_dev : 0;
+		dev_t bd_dev __maybe_unused = bdev ? bdev->bd_dev : 0;
 
 		ST_LOG("[SYS](%s[%d:%d]): "
 			"umount(mf:0x%x, f:0x%x, %s)\n",
