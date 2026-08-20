@@ -13,15 +13,13 @@
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
+#include <linux/sec_debug.h>
 #include <linux/io.h>
 #include <linux/interrupt.h>
 #include <linux/of_irq.h>
 #include <linux/bitops.h>
 #include <soc/samsung/exynos-pmu.h>
 #include <soc/samsung/exynos-itmon.h>
-#ifdef CONFIG_SEC_DEBUG
-#include <linux/sec_debug.h>
-#endif
 
 #define OFFSET_TMOUT_REG		(0x2000)
 #define OFFSET_REQ_R			(0x0)

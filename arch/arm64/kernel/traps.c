@@ -19,6 +19,7 @@
 
 #include <linux/bug.h>
 #include <linux/signal.h>
+#include <linux/sec_debug.h>
 #include <linux/personality.h>
 #include <linux/kallsyms.h>
 #include <linux/spinlock.h>
@@ -51,10 +52,6 @@
 #include <asm/exception.h>
 #include <asm/system_misc.h>
 #include <asm/sysreg.h>
-
-#ifdef CONFIG_SEC_DEBUG
-#include <linux/sec_debug.h>
-#endif
 
 static const char *handler[]= {
 	"Synchronous Abort",

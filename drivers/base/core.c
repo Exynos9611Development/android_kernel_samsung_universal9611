@@ -2865,6 +2865,7 @@ out:
 }
 EXPORT_SYMBOL_GPL(device_move);
 
+#ifdef CONFIG_SEC_DEBUG
 static void *get_cls_shutdown_func(struct device *dev)
 {
 	if (!dev || !dev->class)
@@ -2894,7 +2895,7 @@ static void *get_drv_shutdown_func(struct device *dev)
 	else
 		return dev->driver->shutdown;
 }
-
+#endif
 /**
  * device_shutdown - call ->shutdown() on each device to shutdown.
  */

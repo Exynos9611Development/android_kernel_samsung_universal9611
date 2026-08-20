@@ -40,10 +40,10 @@
 #include <linux/syscore_ops.h>
 #include <linux/soc/samsung/exynos-soc.h>
 #include <soc/samsung/exynos-pmu.h>
-
-#ifdef CONFIG_SEC_DEBUG
 #include <linux/sec_debug.h>
 #include <linux/sched/clock.h>
+
+#ifdef CONFIG_SEC_DEBUG
 #define SEC_WATCHDOGD_FOOTPRINT
 struct watchdogd_info *wdd_info;
 struct rtc_time wdd_info_tm;
@@ -429,7 +429,9 @@ static int s3c2410wdt_keepalive(struct watchdog_device *wdd)
 {
 	struct s3c2410_wdt *wdt = watchdog_get_drvdata(wdd);
 	unsigned long flags, wtcnt = 0;
+#ifdef SEC_WATCHDOGD_FOOTPRINT
 	time64_t sec;
+#endif
 
 	s3c2410wdt_multistage_wdt_keepalive();
 

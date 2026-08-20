@@ -202,7 +202,7 @@ extern int muic_set_hiccup_mode(int on_off);
 extern void pdic_manual_ccopen_request(int is_on);
 #endif
 extern int muic_afc_set_voltage(int vol);
-#if !defined(CONFIG_SEC_FACTORY)
+#if !defined(CONFIG_SEC_FACTORY) && defined(CONFIG_SEC_PARAM)
 extern bool sales_code_is(char* str);
 #endif
 #if 0
@@ -8207,7 +8207,7 @@ static int sec_battery_probe(struct platform_device *pdev)
 	battery->pdata->store_mode_charging_max = STORE_MODE_CHARGING_MAX;
 	battery->pdata->store_mode_charging_min = STORE_MODE_CHARGING_MIN;
 
-#if !defined(CONFIG_SEC_FACTORY)
+#if !defined(CONFIG_SEC_FACTORY) && defined(CONFIG_SEC_PARAM)
 	if (sales_code_is("VZW")) {
 		dev_err(battery->dev, "%s: Sales is VZW\n", __func__);
 		battery->pdata->store_mode_charging_max = STORE_MODE_CHARGING_MAX_VZW;

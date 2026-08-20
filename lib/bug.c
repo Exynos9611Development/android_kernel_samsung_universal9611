@@ -47,10 +47,8 @@
 #include <linux/bug.h>
 #include <linux/sched.h>
 #include <linux/rculist.h>
-
-#ifdef CONFIG_SEC_DEBUG
 #include <linux/sec_debug.h>
-#endif
+
 extern struct bug_entry __start___bug_table[], __stop___bug_table[];
 
 static inline unsigned long bug_addr(const struct bug_entry *bug)

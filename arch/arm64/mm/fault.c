@@ -28,6 +28,7 @@
 #include <linux/page-flags.h>
 #include <linux/sched/signal.h>
 #include <linux/sched/debug.h>
+#include <linux/sec_debug.h>
 #include <linux/highmem.h>
 #include <linux/perf_event.h>
 #include <linux/preempt.h>
@@ -47,10 +48,6 @@
 #include <asm/tlbflush.h>
 
 #include <acpi/ghes.h>
-
-#ifdef CONFIG_SEC_DEBUG
-#include <linux/sec_debug.h>
-#endif
 
 struct fault_info {
 	int	(*fn)(unsigned long addr, unsigned int esr,

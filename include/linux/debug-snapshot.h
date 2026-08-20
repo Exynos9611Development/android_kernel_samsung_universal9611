@@ -236,6 +236,7 @@ extern void dbg_snapshot_get_softlockup_info(unsigned int cpu, void *info);
 #define dbg_snapshot_get_last_pc_paddr()	do { } while(0)
 #define dbg_snapshot_hook_hardlockup_entry(a) do { } while(0)
 #define dbg_snapshot_hook_hardlockup_exit() do { } while(0)
+#define dbg_snapshot_save_log(a, b)     do { } while(0)
 #define dbg_snapshot_binder(a,b,c)	do { } while(0)
 #define dbg_snapshot_get_hardlockup_info(a, b)	do { } while (0)
 #define dbg_snapshot_get_softlockup_info(a, b)	do { } while (0)

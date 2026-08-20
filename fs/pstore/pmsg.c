@@ -16,9 +16,7 @@
 #include <linux/fs.h>
 #include <linux/uaccess.h>
 #include "internal.h"
-#ifdef CONFIG_SEC_EXT
 #include <linux/sec_ext.h>
-#endif
 
 static DEFINE_MUTEX(pmsg_lock);
 

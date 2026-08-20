@@ -12,10 +12,7 @@
 #include <linux/debug_locks.h>
 #include <linux/delay.h>
 #include <linux/export.h>
-
-#ifdef CONFIG_SEC_DEBUG
 #include <linux/sec_debug.h>
-#endif
 
 void __raw_spin_lock_init(raw_spinlock_t *lock, const char *name,
 			  struct lock_class_key *key)

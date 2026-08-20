@@ -42,6 +42,7 @@
 #include <linux/kallsyms.h>
 #include <linux/writeback.h>
 #include <linux/cpu.h>
+#include <linux/sec_ext.h>
 #include <linux/cpuset.h>
 #include <linux/cgroup.h>
 #include <linux/efi.h>
@@ -93,10 +94,6 @@
 #include <asm/setup.h>
 #include <asm/sections.h>
 #include <asm/cacheflush.h>
-
-#ifdef CONFIG_SEC_EXT
-#include <linux/sec_ext.h>
-#endif
 
 #ifdef CONFIG_UH
 #include <linux/uh_fault_handler.h>

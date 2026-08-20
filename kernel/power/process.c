@@ -41,7 +41,7 @@ static int try_to_freeze_tasks(bool user_only)
 	bool wakeup = false;
 	int sleep_usecs = USEC_PER_MSEC;
 
-	char *sys_state[SYSTEM_END] = {
+	char *sys_state[SYSTEM_END] __maybe_unused = {
 		"BOOTING",
 		"SCHEDULING",
 		"RUNNING",

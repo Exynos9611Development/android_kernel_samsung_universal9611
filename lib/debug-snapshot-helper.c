@@ -27,6 +27,7 @@
 #include <linux/nmi.h>
 #include <linux/init_task.h>
 #include <linux/ftrace.h>
+#include <linux/sec_debug.h>
 
 #include <asm/cputype.h>
 #include <asm/smp_plat.h>
@@ -34,10 +35,6 @@
 
 #include "debug-snapshot-local.h"
 #include <linux/debug-snapshot-helper.h>
-
-#ifdef CONFIG_SEC_DEBUG
-#include <linux/sec_debug.h>
-#endif /* CONFIG_SEC_DEBUG */
 
 static void dbg_snapshot_soc_dummy_func(void *dummy) {return;}
 static int  dbg_snapshot_soc_dummy_func_int(void *dummy) {return 0;}

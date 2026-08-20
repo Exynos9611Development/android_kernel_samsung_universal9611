@@ -142,7 +142,7 @@ config SEC_DEBUG_KASAN
 
 config SEC_BOOTSTAT
 	bool "Enable TN Bootstat logging"
-	depends on SEC_EXT
+	depends on SEC_EXT && SEC_DEBUG
 	default y
 
 config SEC_DEBUG_SPINBUG_PANIC
