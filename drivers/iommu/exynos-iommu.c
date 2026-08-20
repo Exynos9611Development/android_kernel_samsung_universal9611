@@ -1007,25 +1007,39 @@ static int lv1set_section(struct exynos_iommu_domain *domain,
 {
 	bool shareable = !!(prot & IOMMU_CACHE);
 
-	if (lv1ent_section(sent)) {
-		WARN(1, "Trying mapping on 1MiB@%#08x that is mapped",
-			iova);
-		return -EADDRINUSE;
-	}
+	{
+		unsigned long flags;
+		sysmmu_pte_t *pent = NULL;
+		bool do_free = false;
 
-	if (lv1ent_page(sent)) {
-		if (WARN_ON(atomic_read(pgcnt) != NUM_LV2ENTRIES)) {
-			WARN(1, "Trying mapping on 1MiB@%#08x that is mapped",
-				iova);
+		spin_lock_irqsave(&domain->pgtablelock, flags);
+		if (lv1ent_section(sent)) {
+			spin_unlock_irqrestore(&domain->pgtablelock, flags);
+			WARN(1, "Trying mapping on 1MiB@%#08x that is mapped", iova);
 			return -EADDRINUSE;
 		}
-		/* TODO: for v7, free lv2 page table */
-	}
 
-	*sent = mk_lv1ent_sect(paddr);
-	if (shareable)
-		set_lv1ent_shareable(sent);
-	pgtable_flush(sent, sent + 1);
+		if (lv1ent_page(sent)) {
+			if (atomic_read(pgcnt) != NUM_LV2ENTRIES) {
+				spin_unlock_irqrestore(&domain->pgtablelock, flags);
+				WARN(1, "Trying mapping on 1MiB@%#08x that is mapped", iova);
+				return -EADDRINUSE;
+			}
+			pent = page_entry(sent, 0);
+			do_free = true;
+		}
+
+		*sent = mk_lv1ent_sect(paddr);
+		if (shareable)
+			set_lv1ent_shareable(sent);
+		pgtable_flush(sent, sent + 1);
+
+		if (do_free) {
+			kmem_cache_free(lv2table_kmem_cache, pent);
+			atomic_set(pgcnt, 0);
+		}
+		spin_unlock_irqrestore(&domain->pgtablelock, flags);
+	}
 
 	return 0;
 }
@@ -1164,15 +1178,15 @@ unmap_flpd:
 		unsigned long flags;
 		spin_lock_irqsave(&domain->pgtablelock, flags);
 		if (atomic_read(lv2entcnt) == NUM_LV2ENTRIES) {
-			kmem_cache_free(lv2table_kmem_cache,
-					page_entry(sent, 0));
+			sysmmu_pte_t *pent = page_entry(sent, 0);
+			*sent = 0;
+			pgtable_flush(sent, sent + 1);
+			kmem_cache_free(lv2table_kmem_cache, pent);
 			atomic_set(lv2entcnt, 0);
 
 			SYSMMU_EVENT_LOG_IOMMU_FREESLPD(
 				IOMMU_PRIV_TO_LOG(domain),
 				iova_from_sent(domain->pgtable, sent), *sent);
-
-			*sent = 0;
 		}
 		spin_unlock_irqrestore(&domain->pgtablelock, flags);
 	}
