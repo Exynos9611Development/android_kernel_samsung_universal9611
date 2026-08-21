@@ -6086,13 +6086,13 @@ static int sec_bat_get_property(struct power_supply *psy,
 		value.intval = SEC_BATTERY_CURRENT_MA;
 		psy_do_property(battery->pdata->fuelgauge_name, get,
 			POWER_SUPPLY_PROP_CURRENT_NOW, value);
-		val->intval = value.intval;
+		val->intval = value.intval * 1000;
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_AVG:
 		value.intval = SEC_BATTERY_CURRENT_MA;
 		psy_do_property(battery->pdata->fuelgauge_name, get,
 			POWER_SUPPLY_PROP_CURRENT_AVG, value);
-		val->intval = value.intval;
+		val->intval = value.intval * 1000;
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN:
 #if defined(CONFIG_BATTERY_CISD)
