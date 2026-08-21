@@ -250,8 +250,8 @@
 				battery,rp_current_rdu_rp3 = <2100>;
 				battery,rp_current_abnormal_rp3 = <1800>;
 
-				battery,pd_charging_charge_power = <15000>;
-				battery,max_charging_current = <3150>;
+				battery,pd_charging_charge_power = <25000>; /* 25W */
+				battery,max_charging_current = <4800>;
 				battery,max_charging_charge_power = <25000>; /* 25W */
 
 				/* cycle, chg_float_voltage, recharge_condition_vcell, full_condition_vcell, full_condition_soc */
