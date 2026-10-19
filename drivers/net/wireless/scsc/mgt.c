@@ -71,6 +71,10 @@
 #endif
 #define SLSI_PSID_UNIFI_IGMP_OFFLOAD_ACTIVATED 2489
 
+static bool igmp_offload_disable = true;
+module_param(igmp_offload_disable, bool, S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(igmp_offload_disable, "Turn the firmware IGMP offload off at WLAN start, so received IGMP frames go through the host packet filters");
+
 
 /* Manually added: To remove after fapi update */
 #define FAPI_SCANMODE_LOW_LATENCY_2   0x0002
@@ -107,6 +111,18 @@ static int slsi_mib_close_file(struct slsi_dev *sdev, const struct firmware *e);
 static int slsi_mib_download_file(struct slsi_dev *sdev, struct slsi_dev_mib_info *mib_info);
 static int slsi_country_to_index(struct slsi_802_11d_reg_domain *domain_info, const char *alpha2);
 static int slsi_mib_initial_get(struct slsi_dev *sdev);
+
+static void slsi_set_igmp_offload(struct slsi_dev *sdev, bool enable)
+{
+	struct slsi_mib_data mib_data = { 0, NULL };
+	int r;
+
+	if (slsi_mib_encode_bool(&mib_data, SLSI_PSID_UNIFI_IGMP_OFFLOAD_ACTIVATED, enable, 0) != SLSI_MIB_STATUS_SUCCESS)
+		return;
+	r = slsi_mlme_set(sdev, NULL, mib_data.data, mib_data.dataLength);
+	kfree(mib_data.data);
+	SLSI_INFO(sdev, "IGMP offload set to %d: %d\n", enable, r);
+}
 static int slsi_hanged_event_count;
 #ifdef CONFIG_SCSC_WLAN_WIFI_SHARING
 #define SLSI_MAX_CHAN_5G_BAND 25
@@ -873,6 +889,8 @@ int slsi_start(struct slsi_dev *sdev, struct net_device *dev)
 	/* Always try to download optional localmib file via mlme_set, ignore error */
 	(void)slsi_mib_download_file(sdev, &sdev->local_mib);
 #endif
+	if (igmp_offload_disable)
+		slsi_set_igmp_offload(sdev, false);
 	/**
 	 * Download MIB data, if any.
 	 * Get f/w capabilities and default configuration
