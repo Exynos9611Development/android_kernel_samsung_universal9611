@@ -4492,9 +4492,9 @@ int  slsi_update_packet_filters(struct slsi_dev *sdev, struct net_device *dev)
 #define IPV6_PF_PATTERN 0x60
 
 #ifdef CONFIG_SCSC_WLAN_DISABLE_NAT_KA
-#define SLSI_ON_CONNECT_FILTERS_COUNT 2
-#else
 #define SLSI_ON_CONNECT_FILTERS_COUNT 3
+#else
+#define SLSI_ON_CONNECT_FILTERS_COUNT 4
 #endif
 
 void slsi_set_packet_filters(struct slsi_dev *sdev, struct net_device *dev)
@@ -4616,6 +4616,35 @@ void slsi_set_packet_filters(struct slsi_dev *sdev, struct net_device *dev)
 		num_filters++;
 	}
 #endif
+
+	/* Opt out unicast NetBIOS (UDP 136-139) while the host sleeps. Routers that build a client
+	 * list (e.g. the ASUS network map) send a name query every ~20 s to each client and keep
+	 * asking when nobody answers; Android has no NetBIOS service, so each one is a wasted wakeup.
+	 */
+	num_pattern_desc = 0;
+	SET_ETHERTYPE_PATTERN_DESC(pattern_desc[num_pattern_desc], ETH_P_IP);
+	num_pattern_desc++;
+	pattern_desc[num_pattern_desc].offset = ETH_HLEN; /* IPv4, no options */
+	pattern_desc[num_pattern_desc].mask_length = 1;
+	pattern_desc[num_pattern_desc].mask[0] = 0xff;
+	pattern_desc[num_pattern_desc].pattern[0] = 0x45;
+	num_pattern_desc++;
+	pattern_desc[num_pattern_desc].offset = SLSI_IP_TYPE_OFFSET;
+	pattern_desc[num_pattern_desc].mask_length = 1;
+	pattern_desc[num_pattern_desc].mask[0] = 0xff;
+	pattern_desc[num_pattern_desc].pattern[0] = SLSI_IP_TYPE_UDP;
+	num_pattern_desc++;
+	pattern_desc[num_pattern_desc].offset = SLSI_IP_DEST_PORT_OFFSET;
+	pattern_desc[num_pattern_desc].mask_length = 2;
+	pattern_desc[num_pattern_desc].mask[0] = 0xff;
+	pattern_desc[num_pattern_desc].mask[1] = 0xfc;
+	pattern_desc[num_pattern_desc].pattern[0] = 0x00;
+	pattern_desc[num_pattern_desc].pattern[1] = 0x88; /* 136-139 */
+	num_pattern_desc++;
+
+	slsi_create_packet_filter_element(SLSI_NETBIOS_FILTER_ID, FAPI_PACKETFILTERMODE_OPT_OUT_SLEEP,
+					  num_pattern_desc, pattern_desc, &pkt_filter_elem[num_filters], &pkt_filters_len);
+	num_filters++;
 
 	if (num_filters)
 		slsi_mlme_set_packet_filter(sdev, dev, pkt_filters_len, num_filters, pkt_filter_elem);
